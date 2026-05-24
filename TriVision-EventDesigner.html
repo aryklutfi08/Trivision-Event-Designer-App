@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TriVision Event Designer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --tv-bg: #0f1115;
+    --tv-panel: #161922;
+    --tv-panel-2: #1d212d;
+    --tv-line: #2a2f3d;
+    --tv-text: #e6e8ee;
+    --tv-muted: #8b91a3;
+    --tv-gold: #c8a96a;
+    --tv-gold-2: #b08a44;
+    --tv-red: #b3253b;
+    --tv-green: #4ea36c;
+  }
+  html, body { background: var(--tv-bg); color: var(--tv-text); font-family: 'Inter', system-ui, -apple-system, Segoe UI, sans-serif; }
+  body { margin: 0; }
+  .tv-panel { background: var(--tv-panel); border: 1px solid var(--tv-line); }
+  .tv-panel-2 { background: var(--tv-panel-2); border: 1px solid var(--tv-line); }
+  .tv-gold { color: var(--tv-gold); }
+  .tv-gold-bg { background: var(--tv-gold); color: #1a1407; }
+  .tv-gold-bg:hover { background: var(--tv-gold-2); }
+  .tv-red-bg { background: var(--tv-red); color: #fff; }
+  .tv-divider { border-color: var(--tv-line); }
+  .tv-muted { color: var(--tv-muted); }
+  .scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+  .scroll-thin::-webkit-scrollbar-track { background: transparent; }
+  .scroll-thin::-webkit-scrollbar-thumb { background: #2a2f3d; border-radius: 4px; }
+  .scroll-thin::-webkit-scrollbar-thumb:hover { background: #3a4055; }
+  .floor-grid {
+    background-image:
+      linear-gradient(to right, rgba(200,169,106,0.06) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(200,169,106,0.06) 1px, transparent 1px);
+    background-size: 10px 10px;
+  }
+  .item-shadow { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); }
+  .item-handle { cursor: grab; }
+  .item-handle:active { cursor: grabbing; }
+  .pulse-gold { box-shadow: 0 0 0 0 rgba(200,169,106,0.5); animation: pulse-gold 2s infinite; }
+  @keyframes pulse-gold { 0%{box-shadow:0 0 0 0 rgba(200,169,106,0.5);} 70%{box-shadow:0 0 0 8px rgba(200,169,106,0);} 100%{box-shadow:0 0 0 0 rgba(200,169,106,0);} }
+  .tab-active { background: var(--tv-panel-2); color: var(--tv-gold); border-color: var(--tv-gold) !important; }
+  select, input, textarea {
+    background: var(--tv-panel-2);
+    color: var(--tv-text);
+    border: 1px solid var(--tv-line);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 14px;
+    outline: none;
+  }
+  select:focus, input:focus, textarea:focus { border-color: var(--tv-gold); }
+  button { transition: all 120ms ease; }
+  .badge { display:inline-flex; align-items:center; gap:4px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 500; }
+  .badge-gold { background: rgba(200,169,106,0.15); color: var(--tv-gold); border: 1px solid rgba(200,169,106,0.3); }
+  .badge-green { background: rgba(78,163,108,0.15); color: var(--tv-green); border: 1px solid rgba(78,163,108,0.3); }
+  .badge-red { background: rgba(179,37,59,0.15); color: #e76072; border: 1px solid rgba(179,37,59,0.3); }
+  .badge-muted { background: rgba(139,145,163,0.1); color: var(--tv-muted); border: 1px solid var(--tv-line); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+// ============================================================
+// DATA
+// ============================================================
+
+const SPACES = {
+  A: {
+    id: 'A',
+    name: 'Space A — Main Ballroom',
+    widthFt: 44,
+    depthFt: 71,
+    description: 'Primary event space with permanent LED video wall, stage, and direct access to the operations control room.',
+    fixtures: [
+      // Stage with LED video wall (top of room)
+      { type: 'stage', x: 6, y: 4, w: 32, h: 8, label: 'Main Stage + LED Video Wall' },
+      // Door indicators (rough)
+      { type: 'door', x: 0, y: 18, w: 1, h: 4, label: 'To Space B' },
+      { type: 'door', x: 43, y: 18, w: 1, h: 4, label: 'To Kitchen' },
+      { type: 'door', x: 18, y: 70, w: 8, h: 1, label: 'To Lobby' },
+    ],
+  },
+  B: {
+    id: 'B',
+    name: 'Space B — Buffet / Breakout',
+    widthFt: 26,
+    depthFt: 42,
+    description: 'Flexible support room for buffet stations, networking, breakouts, or sponsor activations.',
+    fixtures: [
+      { type: 'door', x: 25, y: 18, w: 1, h: 4, label: 'To Space A' },
+    ],
+  },
+  C: {
+    id: 'C',
+    name: 'Space C — Breakout Room',
+    widthFt: 34,
+    depthFt: 46,
+    description: 'Quiet meeting room ideal for concurrent breakouts, VIP holding, or speaker prep.',
+    fixtures: [
+      { type: 'door', x: 33, y: 22, w: 1, h: 4, label: 'To Lobby' },
+    ],
+  },
+};
+
+// All measurements in feet
+const FURNITURE_LIBRARY = [
+  { id: 'round-60', label: 'Round Table 60"', type: 'table', shape: 'circle', diameter: 5, capacity: 8, color: '#3b4458' },
+  { id: 'round-72', label: 'Round Table 72"', type: 'table', shape: 'circle', diameter: 6, capacity: 10, color: '#3b4458' },
+  { id: 'cocktail', label: 'High-Top Cocktail', type: 'table', shape: 'circle', diameter: 2.5, capacity: 4, color: '#4a3d2b' },
+  { id: 'rect-6', label: 'Rect Table 6′', type: 'table', shape: 'rect', w: 6, h: 2.5, capacity: 6, color: '#3b4458' },
+  { id: 'rect-8', label: 'Rect Table 8′', type: 'table', shape: 'rect', w: 8, h: 2.5, capacity: 8, color: '#3b4458' },
+  { id: 'banquet-chair', label: 'Banquet Chair', type: 'chair', shape: 'rect', w: 1.5, h: 1.5, capacity: 1, color: '#8a99b8' },
+  { id: 'theatre-chair', label: 'Theatre Chair', type: 'chair', shape: 'rect', w: 1.5, h: 1.5, capacity: 1, color: '#8a99b8' },
+  { id: 'lounge-sofa', label: 'Lounge Sofa', type: 'lounge', shape: 'rect', w: 5, h: 2.5, capacity: 3, color: '#5a4a3a' },
+  { id: 'lounge-chair', label: 'Lounge Chair', type: 'lounge', shape: 'rect', w: 2.5, h: 2.5, capacity: 1, color: '#5a4a3a' },
+  { id: 'podium', label: 'Podium / Lectern', type: 'fixture', shape: 'rect', w: 2, h: 1.5, capacity: 0, color: '#c8a96a' },
+  { id: 'stage-deck', label: 'Stage Deck 4×8', type: 'fixture', shape: 'rect', w: 8, h: 4, capacity: 0, color: '#2a2f3d' },
+];
+
+const FURN_BY_ID = Object.fromEntries(FURNITURE_LIBRARY.map(f => [f.id, f]));
+
+// ============================================================
+// PRESET LAYOUTS — return array of {furnId, xFt, yFt, rotation}
+// ============================================================
+
+function presetTheatre(space) {
+  const items = [];
+  const startY = 16; // below stage
+  const endY = space.depthFt - 4;
+  const chairSpacing = 2; // ft
+  const rowSpacing = 3;
+  const aisleWidth = 4;
+  const halfWidth = (space.widthFt - aisleWidth) / 2;
+  const seatsPerHalf = Math.floor(halfWidth / chairSpacing);
+  const startXLeft = (space.widthFt - aisleWidth) / 2 - seatsPerHalf * chairSpacing + 1;
+  const startXRight = (space.widthFt + aisleWidth) / 2 + 1;
+  for (let y = startY; y <= endY - rowSpacing; y += rowSpacing) {
+    for (let i = 0; i < seatsPerHalf; i++) {
+      items.push({ furnId: 'theatre-chair', xFt: startXLeft + i * chairSpacing, yFt: y });
+      items.push({ furnId: 'theatre-chair', xFt: startXRight + i * chairSpacing, yFt: y });
+    }
+  }
+  return items;
+}
+
+function presetBanquet(space) {
+  const items = [];
+  const tableSize = 6; // diameter
+  const tableSpacingX = 9;
+  const tableSpacingY = 9;
+  const startY = 18;
+  const endY = space.depthFt - 6;
+  const cols = Math.floor((space.widthFt - 6) / tableSpacingX);
+  const offsetX = (space.widthFt - (cols - 1) * tableSpacingX) / 2 - tableSize / 2;
+  for (let y = startY; y <= endY - tableSpacingY; y += tableSpacingY) {
+    for (let c = 0; c < cols; c++) {
+      const tx = offsetX + c * tableSpacingX;
+      items.push({ furnId: 'round-72', xFt: tx, yFt: y });
+      // 10 chairs around each table
+      const cx = tx + tableSize / 2;
+      const cy = y + tableSize / 2;
+      const r = tableSize / 2 + 1;
+      for (let k = 0; k < 10; k++) {
+        const a = (k / 10) * Math.PI * 2;
+        items.push({
+          furnId: 'banquet-chair',
+          xFt: cx + Math.cos(a) * r - 0.75,
+          yFt: cy + Math.sin(a) * r - 0.75,
+        });
+      }
+    }
+  }
+  return items;
+}
+
+function presetClassroom(space) {
+  const items = [];
+  const startY = 16;
+  const endY = space.depthFt - 4;
+  const rowSpacing = 5;
+  const tableW = 6;
+  const tablesPerRow = Math.floor((space.widthFt - 4) / (tableW + 1));
+  const offsetX = (space.widthFt - (tablesPerRow * (tableW + 1) - 1)) / 2;
+  for (let y = startY; y <= endY - rowSpacing; y += rowSpacing) {
+    for (let i = 0; i < tablesPerRow; i++) {
+      const tx = offsetX + i * (tableW + 1);
+      items.push({ furnId: 'rect-6', xFt: tx, yFt: y });
+      // 3 chairs on the audience side (facing stage = facing up)
+      items.push({ furnId: 'banquet-chair', xFt: tx + 0.5, yFt: y + 2.7 });
+      items.push({ furnId: 'banquet-chair', xFt: tx + 2.25, yFt: y + 2.7 });
+      items.push({ furnId: 'banquet-chair', xFt: tx + 4, yFt: y + 2.7 });
+    }
+  }
+  return items;
+}
+
+function presetUShape(space) {
+  const items = [];
+  const startY = 18;
+  const endY = space.depthFt - 12;
+  const sideX1 = space.widthFt / 2 - 8;
+  const sideX2 = space.widthFt / 2 + 5;
+  // Top of U (closest to stage) — horizontal tables
+  for (let i = 0; i < 3; i++) {
+    items.push({ furnId: 'rect-6', xFt: sideX1 + i * 6, yFt: startY });
+    items.push({ furnId: 'banquet-chair', xFt: sideX1 + 0.5 + i * 6, yFt: startY - 2 });
+    items.push({ furnId: 'banquet-chair', xFt: sideX1 + 2.25 + i * 6, yFt: startY - 2 });
+    items.push({ furnId: 'banquet-chair', xFt: sideX1 + 4 + i * 6, yFt: startY - 2 });
+  }
+  // Left side of U — vertical tables
+  for (let y = startY + 4; y < endY; y += 6) {
+    items.push({ furnId: 'rect-6', xFt: sideX1, yFt: y, rotation: 90 });
+    items.push({ furnId: 'banquet-chair', xFt: sideX1 - 2, yFt: y + 0.5 });
+    items.push({ furnId: 'banquet-chair', xFt: sideX1 - 2, yFt: y + 2.25 });
+    items.push({ furnId: 'banquet-chair', xFt: sideX1 - 2, yFt: y + 4 });
+  }
+  // Right side of U
+  for (let y = startY + 4; y < endY; y += 6) {
+    items.push({ furnId: 'rect-6', xFt: sideX2 + 2.5, yFt: y, rotation: 90 });
+    items.push({ furnId: 'banquet-chair', xFt: sideX2 + 5, yFt: y + 0.5 });
+    items.push({ furnId: 'banquet-chair', xFt: sideX2 + 5, yFt: y + 2.25 });
+    items.push({ furnId: 'banquet-chair', xFt: sideX2 + 5, yFt: y + 4 });
+  }
+  return items;
+}
+
+function presetBoardroom(space) {
+  const items = [];
+  const cy = space.depthFt / 2 + 4;
+  const cx = space.widthFt / 2;
+  // 3 rectangular tables in a row to make a long boardroom table
+  for (let i = -1; i <= 1; i++) {
+    items.push({ furnId: 'rect-8', xFt: cx - 4, yFt: cy + i * 2.5 - 1.25 });
+  }
+  // Chairs around long sides
+  for (let i = 0; i < 6; i++) {
+    items.push({ furnId: 'banquet-chair', xFt: cx - 4 + i * 1.4, yFt: cy - 5.5 });
+    items.push({ furnId: 'banquet-chair', xFt: cx - 4 + i * 1.4, yFt: cy + 4 });
+  }
+  // Chairs at the ends
+  items.push({ furnId: 'banquet-chair', xFt: cx - 5.5, yFt: cy - 0.75 });
+  items.push({ furnId: 'banquet-chair', xFt: cx + 4.5, yFt: cy - 0.75 });
+  return items;
+}
+
+function presetReception(space) {
+  const items = [];
+  const cols = Math.floor(space.widthFt / 8);
+  const rows = Math.floor((space.depthFt - 14) / 8);
+  const offsetX = (space.widthFt - cols * 8) / 2 + 4;
+  const offsetY = 16;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      // Stagger
+      const ox = (r % 2 === 0) ? 0 : 4;
+      const x = offsetX + c * 8 + ox - 1.25;
+      const y = offsetY + r * 8 - 1.25;
+      if (x < space.widthFt - 3 && y < space.depthFt - 4) {
+        items.push({ furnId: 'cocktail', xFt: x, yFt: y });
+      }
+    }
+  }
+  return items;
+}
+
+const PRESETS = [
+  { id: 'theatre', label: 'Theatre', desc: 'Rows of chairs facing stage', icon: '🎬', fn: presetTheatre },
+  { id: 'banquet', label: 'Banquet', desc: 'Round tables, seats of 10', icon: '🍽️', fn: presetBanquet },
+  { id: 'classroom', label: 'Classroom', desc: 'Rect tables w/ 3 chairs', icon: '📚', fn: presetClassroom },
+  { id: 'ushape', label: 'U-Shape', desc: 'Tables in a U facing stage', icon: '🔄', fn: presetUShape },
+  { id: 'boardroom', label: 'Boardroom', desc: 'Single long table', icon: '💼', fn: presetBoardroom },
+  { id: 'reception', label: 'Reception', desc: 'Standing high-tops', icon: '🥂', fn: presetReception },
+];
+
+// ============================================================
+// MOCK DATA
+// ============================================================
+
+const SAMPLE_EVENTS = [
+  { id: 'evt-1', name: 'Accenture — Let There Be Change Summit', client: 'Accenture', date: '2026-06-04', guests: 280, type: 'Brand Activation', space: 'A', preset: 'theatre', status: 'Confirmed', leadStaff: 'Maya Chen' },
+  { id: 'evt-2', name: 'Greater Reston Chamber — Titans of the Toll Road', client: 'Greater Reston Chamber of Commerce', date: '2026-05-22', guests: 220, type: 'Panel Discussion', space: 'A', preset: 'theatre', status: 'Confirmed', leadStaff: 'Marcus Patel' },
+  { id: 'evt-3', name: 'Airbus Q2 Leadership Meeting', client: 'Airbus', date: '2026-05-29', guests: 64, type: 'Corporate Meeting', space: 'A', preset: 'boardroom', status: 'Hold', leadStaff: 'Sara Okonkwo' },
+  { id: 'evt-4', name: 'NVTC Awards Gala', client: 'NVTC', date: '2026-06-19', guests: 320, type: 'Awards Ceremony', space: 'A', preset: 'banquet', status: 'Confirmed', leadStaff: 'Maya Chen' },
+  { id: 'evt-5', name: 'API Training Day', client: 'American Petroleum Institute', date: '2026-05-21', guests: 90, type: 'Training Program', space: 'A', preset: 'classroom', status: 'Confirmed', leadStaff: 'Marcus Patel' },
+  { id: 'evt-6', name: 'Cvent Partner Reception', client: 'Cvent', date: '2026-06-12', guests: 180, type: 'Standing Reception', space: 'A', preset: 'reception', status: 'Tentative', leadStaff: 'Sara Okonkwo' },
+];
+
+const INVENTORY = [
+  { id: 'inv-1', name: 'Banquet Chair — Chiavari Gold', stock: 400, deployed: 280, category: 'Seating' },
+  { id: 'inv-2', name: 'Standard House Chair', stock: 600, deployed: 120, category: 'Seating' },
+  { id: 'inv-3', name: 'Lounge Sofa — Velvet', stock: 18, deployed: 6, category: 'Seating' },
+  { id: 'inv-4', name: 'Round Table 72"', stock: 50, deployed: 28, category: 'Tables' },
+  { id: 'inv-5', name: 'Round Table 60"', stock: 40, deployed: 12, category: 'Tables' },
+  { id: 'inv-6', name: 'Rectangular Table 6′', stock: 60, deployed: 18, category: 'Tables' },
+  { id: 'inv-7', name: 'High-Top Cocktail', stock: 40, deployed: 14, category: 'Tables' },
+  { id: 'inv-8', name: 'Modular Stage Deck 4×8', stock: 20, deployed: 8, category: 'Staging' },
+  { id: 'inv-9', name: 'Acrylic Podium', stock: 4, deployed: 2, category: 'Staging' },
+  { id: 'inv-10', name: 'Wireless Lavalier Mic', stock: 16, deployed: 6, category: 'AV' },
+  { id: 'inv-11', name: 'Handheld Wireless Mic', stock: 12, deployed: 4, category: 'AV' },
+  { id: 'inv-12', name: 'Roving Camera Op', stock: 3, deployed: 1, category: 'AV' },
+];
+
+// ============================================================
+// HELPERS
+// ============================================================
+
+const FT_TO_PX = 12; // 1 ft = 12 px on canvas
+
+function ftToPx(ft) { return ft * FT_TO_PX; }
+function pxToFt(px) { return px / FT_TO_PX; }
+
+function uid() { return Math.random().toString(36).slice(2, 9); }
+
+function classNames(...c) { return c.filter(Boolean).join(' '); }
+
+// ============================================================
+// COMPONENTS
+// ============================================================
+
+function Sidebar({ active, onNav }) {
+  const items = [
+    { id: 'dashboard', label: 'Dashboard', icon: '◫' },
+    { id: 'designer', label: 'Layout Designer', icon: '✦' },
+    { id: 'events', label: 'Events', icon: '◐' },
+    { id: 'inventory', label: 'Inventory', icon: '⊞' },
+    { id: 'reports', label: 'Reports', icon: '◆' },
+  ];
+  return (
+    <aside className="w-60 tv-panel border-r flex flex-col flex-shrink-0">
+      <div className="px-5 py-5 border-b tv-divider">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded tv-gold-bg flex items-center justify-center font-bold text-sm">TV</div>
+          <div>
+            <div className="font-semibold text-sm tracking-wide">TRIVISION</div>
+            <div className="text-[10px] tv-muted uppercase tracking-wider">Event Designer</div>
+          </div>
+        </div>
+      </div>
+      <nav className="flex-1 p-3 space-y-1">
+        {items.map(it => (
+          <button
+            key={it.id}
+            onClick={() => onNav(it.id)}
+            className={classNames(
+              "w-full flex items-center gap-3 px-3 py-2 rounded text-sm text-left transition",
+              active === it.id
+                ? "bg-[#1d212d] text-white border-l-2 border-[var(--tv-gold)]"
+                : "text-[var(--tv-muted)] hover:bg-[#1d212d] hover:text-white border-l-2 border-transparent"
+            )}
+          >
+            <span className="text-base tv-gold">{it.icon}</span>
+            <span>{it.label}</span>
+          </button>
+        ))}
+      </nav>
+      <div className="p-4 border-t tv-divider">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-700 flex items-center justify-center text-xs font-semibold">AK</div>
+          <div className="text-xs">
+            <div className="font-medium">Arya K.</div>
+            <div className="tv-muted">Operations</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function TopBar({ title, subtitle, right }) {
+  return (
+    <div className="px-8 py-5 border-b tv-divider flex items-center justify-between flex-shrink-0">
+      <div>
+        <h1 className="text-xl font-semibold">{title}</h1>
+        {subtitle && <div className="text-sm tv-muted mt-0.5">{subtitle}</div>}
+      </div>
+      <div className="flex items-center gap-3">{right}</div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, sub, accent }) {
+  return (
+    <div className="tv-panel rounded-lg p-5">
+      <div className="text-xs tv-muted uppercase tracking-wider">{label}</div>
+      <div className={classNames("text-3xl font-semibold mt-2", accent || "")}>{value}</div>
+      {sub && <div className="text-xs tv-muted mt-1">{sub}</div>}
+    </div>
+  );
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+
+function Dashboard({ events, onOpenEvent, onNewEvent, onNav }) {
+  const upcoming = events.filter(e => new Date(e.date) >= new Date('2026-05-15')).sort((a,b) => a.date.localeCompare(b.date));
+  const totalGuests = upcoming.reduce((a, e) => a + e.guests, 0);
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <TopBar
+        title="Welcome back, Arya"
+        subtitle="Friday, May 15, 2026 — Here's what's coming up at TriVision."
+        right={
+          <>
+            <button className="px-3 py-2 text-sm tv-panel-2 rounded border tv-divider hover:border-[var(--tv-gold)]">
+              Today's run sheet
+            </button>
+            <button onClick={onNewEvent} className="px-4 py-2 text-sm tv-gold-bg font-medium rounded">
+              + New Event
+            </button>
+          </>
+        }
+      />
+      <div className="flex-1 overflow-auto scroll-thin p-8 space-y-8">
+        <div className="grid grid-cols-4 gap-4">
+          <StatCard label="Confirmed Events" value={events.filter(e => e.status === 'Confirmed').length} sub="Next 60 days" accent="tv-gold" />
+          <StatCard label="Holds / Tentative" value={events.filter(e => e.status !== 'Confirmed').length} sub="Awaiting confirmation" />
+          <StatCard label="Total Guests Booked" value={totalGuests.toLocaleString()} sub="Across upcoming events" />
+          <StatCard label="Avg. Setup Time" value="4.2h" sub="Down 18% vs Q1" accent="text-emerald-400" />
+        </div>
+
+        <div className="grid grid-cols-3 gap-6">
+          <div className="col-span-2 tv-panel rounded-lg">
+            <div className="px-5 py-4 border-b tv-divider flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold">Upcoming events</h2>
+                <div className="text-xs tv-muted">Click any event to open its layout</div>
+              </div>
+              <button onClick={() => onNav('events')} className="text-xs tv-gold hover:underline">View all →</button>
+            </div>
+            <div className="divide-y tv-divider">
+              {upcoming.slice(0, 5).map(e => (
+                <button
+                  key={e.id}
+                  onClick={() => onOpenEvent(e)}
+                  className="w-full px-5 py-4 flex items-center gap-4 hover:bg-[#1d212d] text-left"
+                >
+                  <div className="flex flex-col items-center justify-center w-14 h-14 rounded tv-panel-2 border tv-divider">
+                    <div className="text-[10px] tv-muted uppercase">{new Date(e.date).toLocaleString('en-US', { month: 'short' })}</div>
+                    <div className="text-xl font-semibold tv-gold leading-tight">{new Date(e.date).getDate()}</div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{e.name}</div>
+                    <div className="text-xs tv-muted mt-0.5">{e.client} · {e.type}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-medium">{e.guests} guests</div>
+                    <div className="text-xs tv-muted">Space {e.space} · {PRESETS.find(p => p.id === e.preset)?.label}</div>
+                  </div>
+                  <span className={classNames(
+                    "badge",
+                    e.status === 'Confirmed' ? 'badge-green' :
+                    e.status === 'Hold' ? 'badge-gold' : 'badge-muted'
+                  )}>
+                    {e.status}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="tv-panel rounded-lg p-5">
+              <h3 className="font-semibold mb-3">Quick actions</h3>
+              <div className="space-y-2">
+                <button onClick={() => onNav('designer')} className="w-full text-left tv-panel-2 hover:border-[var(--tv-gold)] border tv-divider rounded p-3">
+                  <div className="text-sm font-medium">Open Layout Designer →</div>
+                  <div className="text-xs tv-muted mt-0.5">Sketch a new room layout</div>
+                </button>
+                <button onClick={() => onNav('inventory')} className="w-full text-left tv-panel-2 hover:border-[var(--tv-gold)] border tv-divider rounded p-3">
+                  <div className="text-sm font-medium">Check inventory →</div>
+                  <div className="text-xs tv-muted mt-0.5">Chairs, tables, AV gear</div>
+                </button>
+                <button onClick={() => onNav('reports')} className="w-full text-left tv-panel-2 hover:border-[var(--tv-gold)] border tv-divider rounded p-3">
+                  <div className="text-sm font-medium">View utilization →</div>
+                  <div className="text-xs tv-muted mt-0.5">Space + inventory reports</div>
+                </button>
+              </div>
+            </div>
+
+            <div className="tv-panel rounded-lg p-5">
+              <h3 className="font-semibold mb-3">Today on site</h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center gap-3">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 pulse-gold"></span>
+                  <div className="flex-1">
+                    <div>Walkthrough — Adidas comms team</div>
+                    <div className="text-xs tv-muted">2:30 PM · Lobby Reception</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="w-2 h-2 rounded-full tv-muted bg-gray-500"></span>
+                  <div className="flex-1">
+                    <div>AV rehearsal — Greater Reston Chamber</div>
+                    <div className="text-xs tv-muted">4:00 PM · Space A</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="w-2 h-2 rounded-full tv-muted bg-gray-500"></span>
+                  <div className="flex-1">
+                    <div>Floral delivery — NVTC Gala</div>
+                    <div className="text-xs tv-muted">6:00 PM · Loading Dock 2</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// EVENTS LIST
+// ============================================================
+
+function EventsScreen({ events, onOpenEvent, onNewEvent }) {
+  const [filter, setFilter] = useState('all');
+  const filtered = filter === 'all' ? events : events.filter(e => e.status.toLowerCase() === filter);
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <TopBar
+        title="Events"
+        subtitle={`${events.length} events on the calendar`}
+        right={
+          <>
+            <select value={filter} onChange={e => setFilter(e.target.value)}>
+              <option value="all">All statuses</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="hold">Hold</option>
+              <option value="tentative">Tentative</option>
+            </select>
+            <button onClick={onNewEvent} className="px-4 py-2 text-sm tv-gold-bg font-medium rounded">+ New Event</button>
+          </>
+        }
+      />
+      <div className="flex-1 overflow-auto scroll-thin p-8">
+        <div className="tv-panel rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs uppercase tracking-wider tv-muted border-b tv-divider">
+                <th className="text-left px-5 py-3">Event</th>
+                <th className="text-left px-5 py-3">Client</th>
+                <th className="text-left px-5 py-3">Date</th>
+                <th className="text-left px-5 py-3">Space</th>
+                <th className="text-left px-5 py-3">Layout</th>
+                <th className="text-left px-5 py-3">Guests</th>
+                <th className="text-left px-5 py-3">Lead</th>
+                <th className="text-left px-5 py-3">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(e => (
+                <tr key={e.id} onClick={() => onOpenEvent(e)} className="border-b tv-divider hover:bg-[#1d212d] cursor-pointer">
+                  <td className="px-5 py-4 font-medium">{e.name}</td>
+                  <td className="px-5 py-4 tv-muted">{e.client}</td>
+                  <td className="px-5 py-4">{new Date(e.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                  <td className="px-5 py-4">Space {e.space}</td>
+                  <td className="px-5 py-4">{PRESETS.find(p => p.id === e.preset)?.label || '—'}</td>
+                  <td className="px-5 py-4">{e.guests}</td>
+                  <td className="px-5 py-4 tv-muted">{e.leadStaff}</td>
+                  <td className="px-5 py-4">
+                    <span className={classNames(
+                      "badge",
+                      e.status === 'Confirmed' ? 'badge-green' :
+                      e.status === 'Hold' ? 'badge-gold' : 'badge-muted'
+                    )}>{e.status}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// LAYOUT DESIGNER
+// ============================================================
+
+function FloorPlanCanvas({ space, items, onMove, onSelect, selectedId, onDeselect }) {
+  const canvasRef = useRef(null);
+  const draggingRef = useRef(null);
+
+  const widthPx = ftToPx(space.widthFt);
+  const depthPx = ftToPx(space.depthFt);
+
+  const handleMouseDown = (e, item) => {
+    e.stopPropagation();
+    onSelect(item.id);
+    const rect = canvasRef.current.getBoundingClientRect();
+    draggingRef.current = {
+      id: item.id,
+      offsetX: e.clientX - rect.left - ftToPx(item.xFt),
+      offsetY: e.clientY - rect.top - ftToPx(item.yFt),
+    };
+  };
+
+  const handleMouseMove = (e) => {
+    if (!draggingRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const xPx = e.clientX - rect.left - draggingRef.current.offsetX;
+    const yPx = e.clientY - rect.top - draggingRef.current.offsetY;
+    onMove(draggingRef.current.id, pxToFt(xPx), pxToFt(yPx));
+  };
+
+  const handleMouseUp = () => {
+    draggingRef.current = null;
+  };
+
+  useEffect(() => {
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  });
+
+  return (
+    <div
+      ref={canvasRef}
+      onClick={onDeselect}
+      className="floor-grid relative bg-[#0a0c10] border-2 border-[var(--tv-line)] mx-auto"
+      style={{ width: widthPx, height: depthPx }}
+    >
+      {/* Fixtures (stage, doors) */}
+      {space.fixtures.map((f, i) => (
+        <div
+          key={i}
+          className={classNames(
+            "absolute flex items-center justify-center text-[10px] font-medium",
+            f.type === 'stage' ? 'bg-gradient-to-b from-[#4a2638] to-[#1c1419] text-amber-200 border-2 border-amber-700/40'
+            : 'bg-emerald-900/30 text-emerald-300/60 border border-dashed border-emerald-600/40'
+          )}
+          style={{
+            left: ftToPx(f.x),
+            top: ftToPx(f.y),
+            width: ftToPx(f.w),
+            height: ftToPx(f.h),
+          }}
+        >
+          {f.type === 'stage' ? f.label : ''}
+        </div>
+      ))}
+
+      {/* Placed items */}
+      {items.map(item => {
+        const f = FURN_BY_ID[item.furnId];
+        if (!f) return null;
+        const isSelected = item.id === selectedId;
+        if (f.shape === 'circle') {
+          const d = ftToPx(f.diameter);
+          return (
+            <div
+              key={item.id}
+              onMouseDown={e => handleMouseDown(e, item)}
+              className={classNames(
+                "absolute rounded-full item-handle item-shadow flex items-center justify-center text-[8px] font-semibold",
+                isSelected ? "ring-2 ring-[var(--tv-gold)] ring-offset-1 ring-offset-[#0a0c10]" : ""
+              )}
+              style={{
+                left: ftToPx(item.xFt),
+                top: ftToPx(item.yFt),
+                width: d,
+                height: d,
+                background: f.color,
+                color: f.id === 'cocktail' ? '#c8a96a' : '#cfd6e4',
+              }}
+              title={f.label}
+            >
+              {f.id === 'cocktail' ? '◯' : f.capacity}
+            </div>
+          );
+        }
+        return (
+          <div
+            key={item.id}
+            onMouseDown={e => handleMouseDown(e, item)}
+            className={classNames(
+              "absolute item-handle item-shadow flex items-center justify-center text-[8px] font-semibold",
+              isSelected ? "ring-2 ring-[var(--tv-gold)] ring-offset-1 ring-offset-[#0a0c10]" : "",
+              f.type === 'chair' ? 'rounded-sm' : 'rounded'
+            )}
+            style={{
+              left: ftToPx(item.xFt),
+              top: ftToPx(item.yFt),
+              width: ftToPx(item.rotation === 90 ? f.h : f.w),
+              height: ftToPx(item.rotation === 90 ? f.w : f.h),
+              background: f.color,
+              color: '#cfd6e4',
+              transform: item.rotation ? `rotate(${item.rotation}deg)` : undefined,
+              transformOrigin: 'center',
+            }}
+            title={f.label}
+          >
+            {f.type === 'chair' ? '' : f.type === 'fixture' ? f.label.split(' ')[0] : f.capacity}
+          </div>
+        );
+      })}
+
+      {/* Scale ruler */}
+      <div className="absolute -bottom-6 left-0 right-0 flex justify-between text-[10px] tv-muted">
+        <span>0 ft</span>
+        <span>{space.widthFt} ft wide</span>
+      </div>
+      <div className="absolute top-0 -left-10 bottom-0 flex flex-col justify-between text-[10px] tv-muted">
+        <span>0 ft</span>
+        <span>{space.depthFt} ft</span>
+      </div>
+    </div>
+  );
+}
+
+function Designer({ events, currentEvent, onSaveEvent }) {
+  const [spaceId, setSpaceId] = useState(currentEvent?.space || 'A');
+  const space = SPACES[spaceId];
+  const [items, setItems] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
+  const [eventName, setEventName] = useState(currentEvent?.name || 'Untitled Event');
+  const [eventClient, setEventClient] = useState(currentEvent?.client || '');
+  const [eventGuests, setEventGuests] = useState(currentEvent?.guests || 200);
+  const [showSaved, setShowSaved] = useState(false);
+
+  // Initialize layout when event or space changes
+  useEffect(() => {
+    if (currentEvent?.preset) {
+      applyPreset(currentEvent.preset);
+    }
+    // eslint-disable-next-line
+  }, [currentEvent?.id, spaceId]);
+
+  const applyPreset = (presetId) => {
+    const preset = PRESETS.find(p => p.id === presetId);
+    if (!preset) return;
+    const placed = preset.fn(space).map(it => ({ ...it, id: uid() }));
+    setItems(placed);
+    setSelectedId(null);
+  };
+
+  const addItem = (furnId) => {
+    const f = FURN_BY_ID[furnId];
+    const size = f.shape === 'circle' ? f.diameter : Math.max(f.w, f.h);
+    const it = {
+      id: uid(),
+      furnId,
+      xFt: space.widthFt / 2 - size / 2,
+      yFt: space.depthFt / 2 - size / 2,
+    };
+    setItems(prev => [...prev, it]);
+    setSelectedId(it.id);
+  };
+
+  const moveItem = (id, xFt, yFt) => {
+    const clamped = (v, max, size) => Math.max(0, Math.min(max - size, v));
+    setItems(prev => prev.map(it => {
+      if (it.id !== id) return it;
+      const f = FURN_BY_ID[it.furnId];
+      const w = f.shape === 'circle' ? f.diameter : (it.rotation === 90 ? f.h : f.w);
+      const h = f.shape === 'circle' ? f.diameter : (it.rotation === 90 ? f.w : f.h);
+      return { ...it, xFt: clamped(xFt, space.widthFt, w), yFt: clamped(yFt, space.depthFt, h) };
+    }));
+  };
+
+  const deleteItem = (id) => {
+    setItems(prev => prev.filter(it => it.id !== id));
+    setSelectedId(null);
+  };
+
+  const rotateItem = (id) => {
+    setItems(prev => prev.map(it => it.id === id ? { ...it, rotation: ((it.rotation || 0) + 90) % 360 } : it));
+  };
+
+  const duplicateItem = (id) => {
+    const orig = items.find(it => it.id === id);
+    if (!orig) return;
+    const copy = { ...orig, id: uid(), xFt: orig.xFt + 2, yFt: orig.yFt + 2 };
+    setItems(prev => [...prev, copy]);
+    setSelectedId(copy.id);
+  };
+
+  const clearAll = () => {
+    if (window.confirm('Clear all items from the floor?')) {
+      setItems([]);
+      setSelectedId(null);
+    }
+  };
+
+  // Stats
+  const stats = useMemo(() => {
+    let chairs = 0, tables = 0, capacity = 0;
+    items.forEach(it => {
+      const f = FURN_BY_ID[it.furnId];
+      if (!f) return;
+      if (f.type === 'chair') chairs++;
+      else if (f.type === 'table') tables++;
+      capacity += f.capacity;
+    });
+    // Effective seating capacity: count chairs OR seat-capacity from tables, whichever is the design intent.
+    // For banquet rounds, capacity is the table's seat count.
+    return { chairs, tables, capacity, total: items.length };
+  }, [items]);
+
+  const selected = items.find(it => it.id === selectedId);
+  const selectedFurn = selected ? FURN_BY_ID[selected.furnId] : null;
+
+  const handleSave = () => {
+    setShowSaved(true);
+    setTimeout(() => setShowSaved(false), 2000);
+  };
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <TopBar
+        title="Layout Designer"
+        subtitle="Drag furniture onto the floor or apply a preset to start."
+        right={
+          <>
+            <button onClick={clearAll} className="px-3 py-2 text-sm rounded border tv-divider tv-panel-2 hover:border-red-400 hover:text-red-300">Clear</button>
+            <button className="px-3 py-2 text-sm rounded border tv-divider tv-panel-2 hover:border-[var(--tv-gold)]">Export PDF</button>
+            <button onClick={handleSave} className="px-4 py-2 text-sm tv-gold-bg font-medium rounded">
+              {showSaved ? '✓ Saved' : 'Save Layout'}
+            </button>
+          </>
+        }
+      />
+
+      <div className="flex-1 flex overflow-hidden">
+        {/* LEFT: Furniture library + Event info */}
+        <div className="w-72 tv-panel border-r tv-divider flex flex-col flex-shrink-0">
+          <div className="p-4 border-b tv-divider">
+            <div className="text-xs uppercase tv-muted tracking-wider mb-2">Event</div>
+            <input value={eventName} onChange={e => setEventName(e.target.value)} className="w-full mb-2 text-sm font-medium" />
+            <input value={eventClient} onChange={e => setEventClient(e.target.value)} placeholder="Client name" className="w-full mb-2 text-xs" />
+            <div className="flex items-center gap-2">
+              <select value={spaceId} onChange={e => setSpaceId(e.target.value)} className="flex-1 text-xs">
+                <option value="A">Space A — Ballroom</option>
+                <option value="B">Space B — Buffet/Breakout</option>
+                <option value="C">Space C — Breakout Room</option>
+              </select>
+              <input type="number" value={eventGuests} onChange={e => setEventGuests(Number(e.target.value))} className="w-16 text-xs" />
+            </div>
+          </div>
+
+          <div className="p-4 border-b tv-divider">
+            <div className="text-xs uppercase tv-muted tracking-wider mb-2">Quick presets</div>
+            <div className="grid grid-cols-2 gap-2">
+              {PRESETS.map(p => (
+                <button key={p.id} onClick={() => applyPreset(p.id)}
+                  className="tv-panel-2 border tv-divider rounded p-2 text-left hover:border-[var(--tv-gold)]">
+                  <div className="text-base">{p.icon}</div>
+                  <div className="text-xs font-medium mt-0.5">{p.label}</div>
+                  <div className="text-[10px] tv-muted">{p.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-auto scroll-thin p-4">
+            <div className="text-xs uppercase tv-muted tracking-wider mb-2">Add furniture</div>
+            <div className="space-y-1">
+              {FURNITURE_LIBRARY.map(f => (
+                <button key={f.id} onClick={() => addItem(f.id)}
+                  className="w-full flex items-center gap-3 px-2 py-2 rounded hover:bg-[#1d212d] text-left">
+                  <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0"
+                       style={{ background: f.color }}>
+                    {f.shape === 'circle' && <div className="w-5 h-5 rounded-full border border-white/30"></div>}
+                    {f.shape === 'rect' && <div className="w-5 h-3 border border-white/30 rounded-sm"></div>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium truncate">{f.label}</div>
+                    <div className="text-[10px] tv-muted">
+                      {f.shape === 'circle' ? `${f.diameter}' dia` : `${f.w}'×${f.h}'`}
+                      {f.capacity > 0 ? ` · seats ${f.capacity}` : ''}
+                    </div>
+                  </div>
+                  <span className="text-xs tv-muted">+</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* CENTER: Floor plan canvas */}
+        <div className="flex-1 overflow-auto scroll-thin bg-[#0a0c10] flex items-start justify-center p-12">
+          <div>
+            <div className="text-center mb-2">
+              <div className="text-sm font-medium tv-gold">{space.name}</div>
+              <div className="text-xs tv-muted">{space.widthFt}′ × {space.depthFt}′ · {(space.widthFt * space.depthFt).toLocaleString()} sq ft</div>
+            </div>
+            <FloorPlanCanvas
+              space={space}
+              items={items}
+              onMove={moveItem}
+              onSelect={setSelectedId}
+              selectedId={selectedId}
+              onDeselect={() => setSelectedId(null)}
+            />
+            <div className="text-center mt-8 text-xs tv-muted">↑ Main Stage / LED Video Wall · ↓ Audience Entrance</div>
+          </div>
+        </div>
+
+        {/* RIGHT: Stats + selected item editor */}
+        <div className="w-72 tv-panel border-l tv-divider flex flex-col flex-shrink-0">
+          <div className="p-5 border-b tv-divider">
+            <div className="text-xs uppercase tv-muted tracking-wider mb-3">Capacity</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <div className="text-2xl font-semibold tv-gold">{stats.capacity}</div>
+                <div className="text-[10px] tv-muted uppercase tracking-wider">Seats</div>
+              </div>
+              <div>
+                <div className="text-2xl font-semibold">{stats.tables}</div>
+                <div className="text-[10px] tv-muted uppercase tracking-wider">Tables</div>
+              </div>
+              <div>
+                <div className="text-2xl font-semibold">{stats.chairs}</div>
+                <div className="text-[10px] tv-muted uppercase tracking-wider">Chairs</div>
+              </div>
+              <div>
+                <div className="text-2xl font-semibold">{stats.total}</div>
+                <div className="text-[10px] tv-muted uppercase tracking-wider">Total items</div>
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t tv-divider">
+              <div className="flex items-center justify-between text-xs">
+                <span className="tv-muted">Guest count target</span>
+                <span className="font-medium">{eventGuests}</span>
+              </div>
+              <div className="mt-2 h-2 bg-[#0a0c10] rounded overflow-hidden">
+                <div className={classNames(
+                  "h-full transition-all",
+                  stats.capacity >= eventGuests ? "bg-emerald-500" : "bg-amber-500"
+                )} style={{ width: `${Math.min(100, (stats.capacity / eventGuests) * 100)}%` }}></div>
+              </div>
+              <div className="text-[10px] tv-muted mt-1">
+                {stats.capacity >= eventGuests
+                  ? `✓ ${stats.capacity - eventGuests} seats over target`
+                  : `${eventGuests - stats.capacity} seats short of target`}
+              </div>
+            </div>
+          </div>
+
+          <div className="p-5 border-b tv-divider">
+            <div className="text-xs uppercase tv-muted tracking-wider mb-3">Selected item</div>
+            {selected && selectedFurn ? (
+              <div className="space-y-3">
+                <div>
+                  <div className="font-medium text-sm">{selectedFurn.label}</div>
+                  <div className="text-xs tv-muted">
+                    {selectedFurn.shape === 'circle' ? `${selectedFurn.diameter}' diameter` : `${selectedFurn.w}'×${selectedFurn.h}'`}
+                    {selectedFurn.capacity > 0 ? ` · seats ${selectedFurn.capacity}` : ''}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] tv-muted uppercase tracking-wider">X (ft)</label>
+                    <div className="text-sm font-medium">{selected.xFt.toFixed(1)}</div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] tv-muted uppercase tracking-wider">Y (ft)</label>
+                    <div className="text-sm font-medium">{selected.yFt.toFixed(1)}</div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  {selectedFurn.shape === 'rect' && (
+                    <button onClick={() => rotateItem(selected.id)} className="flex-1 px-2 py-1.5 text-xs tv-panel-2 border tv-divider rounded hover:border-[var(--tv-gold)]">⟳ Rotate</button>
+                  )}
+                  <button onClick={() => duplicateItem(selected.id)} className="flex-1 px-2 py-1.5 text-xs tv-panel-2 border tv-divider rounded hover:border-[var(--tv-gold)]">⎘ Duplicate</button>
+                  <button onClick={() => deleteItem(selected.id)} className="flex-1 px-2 py-1.5 text-xs rounded tv-red-bg">✕ Delete</button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-xs tv-muted">Click an item on the floor to edit, rotate, or duplicate it.</div>
+            )}
+          </div>
+
+          <div className="p-5 flex-1 overflow-auto scroll-thin">
+            <div className="text-xs uppercase tv-muted tracking-wider mb-3">Compliance check</div>
+            <div className="space-y-2 text-xs">
+              <div className="flex items-start gap-2">
+                <span className="text-emerald-400 mt-0.5">✓</span>
+                <div>
+                  <div>Aisle clearance ≥ 4 ft</div>
+                  <div className="tv-muted text-[10px]">Confirmed for preset layouts</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-emerald-400 mt-0.5">✓</span>
+                <div>
+                  <div>Stage sightlines unobstructed</div>
+                  <div className="tv-muted text-[10px]">All chairs face stage zone</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className={stats.capacity >= eventGuests ? "text-emerald-400 mt-0.5" : "text-amber-400 mt-0.5"}>
+                  {stats.capacity >= eventGuests ? '✓' : '!'}
+                </span>
+                <div>
+                  <div>Guest capacity target</div>
+                  <div className="tv-muted text-[10px]">{stats.capacity} / {eventGuests}</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-emerald-400 mt-0.5">✓</span>
+                <div>
+                  <div>Loading dock access clear</div>
+                  <div className="tv-muted text-[10px]">No items in dock approach</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// INVENTORY
+// ============================================================
+
+function Inventory() {
+  const categories = [...new Set(INVENTORY.map(i => i.category))];
+  const [active, setActive] = useState('All');
+  const filtered = active === 'All' ? INVENTORY : INVENTORY.filter(i => i.category === active);
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <TopBar
+        title="Inventory"
+        subtitle="Track what's on the floor, what's in storage, and what's running low."
+        right={
+          <button className="px-3 py-2 text-sm tv-panel-2 rounded border tv-divider hover:border-[var(--tv-gold)]">
+            Order request
+          </button>
+        }
+      />
+      <div className="flex-1 overflow-auto scroll-thin p-8 space-y-6">
+        <div className="grid grid-cols-4 gap-4">
+          <StatCard label="Total Items" value={INVENTORY.reduce((a,i) => a + i.stock, 0)} sub="Across all categories" />
+          <StatCard label="Currently Deployed" value={INVENTORY.reduce((a,i) => a + i.deployed, 0)} sub="On floor for live events" accent="tv-gold" />
+          <StatCard label="Available" value={INVENTORY.reduce((a,i) => a + (i.stock - i.deployed), 0)} sub="Ready to schedule" accent="text-emerald-400" />
+          <StatCard label="Low-Stock Alerts" value="2" sub="Lounge sofas, podiums" accent="text-amber-400" />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button onClick={() => setActive('All')} className={classNames(
+            "px-3 py-1.5 text-xs rounded-full border",
+            active === 'All' ? 'tv-gold-bg border-transparent' : 'tv-panel border-[var(--tv-line)] tv-muted hover:text-white'
+          )}>All</button>
+          {categories.map(c => (
+            <button key={c} onClick={() => setActive(c)} className={classNames(
+              "px-3 py-1.5 text-xs rounded-full border",
+              active === c ? 'tv-gold-bg border-transparent' : 'tv-panel border-[var(--tv-line)] tv-muted hover:text-white'
+            )}>{c}</button>
+          ))}
+        </div>
+
+        <div className="tv-panel rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs uppercase tracking-wider tv-muted border-b tv-divider">
+                <th className="text-left px-5 py-3">Item</th>
+                <th className="text-left px-5 py-3">Category</th>
+                <th className="text-right px-5 py-3">Stock</th>
+                <th className="text-right px-5 py-3">Deployed</th>
+                <th className="text-right px-5 py-3">Available</th>
+                <th className="text-left px-5 py-3 w-48">Utilization</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(i => {
+                const pct = (i.deployed / i.stock) * 100;
+                return (
+                  <tr key={i.id} className="border-b tv-divider hover:bg-[#1d212d]">
+                    <td className="px-5 py-3 font-medium">{i.name}</td>
+                    <td className="px-5 py-3 tv-muted">{i.category}</td>
+                    <td className="px-5 py-3 text-right">{i.stock}</td>
+                    <td className="px-5 py-3 text-right">{i.deployed}</td>
+                    <td className="px-5 py-3 text-right font-medium">
+                      <span className={i.stock - i.deployed < 5 ? 'text-amber-400' : ''}>{i.stock - i.deployed}</span>
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 h-1.5 bg-[#0a0c10] rounded overflow-hidden">
+                          <div className={classNames(
+                            "h-full",
+                            pct > 80 ? 'bg-red-500' : pct > 50 ? 'bg-amber-500' : 'bg-emerald-500'
+                          )} style={{ width: `${pct}%` }}></div>
+                        </div>
+                        <span className="text-xs tv-muted w-10 text-right">{pct.toFixed(0)}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// REPORTS
+// ============================================================
+
+function Reports({ events }) {
+  // Utilization by space
+  const utilByPreset = {};
+  events.forEach(e => {
+    utilByPreset[e.preset] = (utilByPreset[e.preset] || 0) + 1;
+  });
+
+  const maxPresetCount = Math.max(...Object.values(utilByPreset));
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <TopBar
+        title="Reports"
+        subtitle="Venue utilization, layout patterns, and operational benchmarks."
+        right={<button className="px-3 py-2 text-sm tv-panel-2 rounded border tv-divider hover:border-[var(--tv-gold)]">Export CSV</button>}
+      />
+      <div className="flex-1 overflow-auto scroll-thin p-8 space-y-6">
+        <div className="grid grid-cols-3 gap-6">
+          <div className="tv-panel rounded-lg p-5">
+            <div className="text-xs uppercase tv-muted tracking-wider">Booking velocity</div>
+            <div className="text-3xl font-semibold mt-2 tv-gold">+24%</div>
+            <div className="text-xs tv-muted mt-1">vs. Q1 2026</div>
+            <div className="mt-4 h-12 flex items-end gap-1">
+              {[40, 55, 48, 70, 62, 80, 92, 88, 105, 110, 124, 124].map((v, i) => (
+                <div key={i} className="flex-1 bg-gradient-to-t from-[var(--tv-gold)] to-amber-300/40 rounded-t" style={{ height: `${v / 1.4}%` }}></div>
+              ))}
+            </div>
+            <div className="text-[10px] tv-muted mt-1 flex justify-between"><span>Jun '25</span><span>May '26</span></div>
+          </div>
+
+          <div className="tv-panel rounded-lg p-5">
+            <div className="text-xs uppercase tv-muted tracking-wider">Avg. guest count</div>
+            <div className="text-3xl font-semibold mt-2">192</div>
+            <div className="text-xs tv-muted mt-1">per event, last 30 days</div>
+            <div className="mt-4 text-xs space-y-1.5">
+              <div className="flex items-center justify-between"><span className="tv-muted">Largest</span><span className="font-medium">320 (NVTC Gala)</span></div>
+              <div className="flex items-center justify-between"><span className="tv-muted">Smallest</span><span className="font-medium">64 (Airbus Mtg)</span></div>
+              <div className="flex items-center justify-between"><span className="tv-muted">Median</span><span className="font-medium">200</span></div>
+            </div>
+          </div>
+
+          <div className="tv-panel rounded-lg p-5">
+            <div className="text-xs uppercase tv-muted tracking-wider">Space utilization</div>
+            <div className="text-3xl font-semibold mt-2">68%</div>
+            <div className="text-xs tv-muted mt-1">Space A booked / available days</div>
+            <div className="mt-4 space-y-2">
+              {['A', 'B', 'C'].map((s, i) => {
+                const pct = [78, 41, 28][i];
+                return (
+                  <div key={s}>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="tv-muted">Space {s}</span>
+                      <span>{pct}%</span>
+                    </div>
+                    <div className="h-1.5 bg-[#0a0c10] rounded overflow-hidden">
+                      <div className="h-full bg-[var(--tv-gold)]" style={{ width: `${pct}%` }}></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-6">
+          <div className="tv-panel rounded-lg p-5">
+            <h3 className="font-semibold mb-4">Most-used layouts</h3>
+            <div className="space-y-3">
+              {Object.entries(utilByPreset).sort((a,b) => b[1] - a[1]).map(([k, v]) => {
+                const preset = PRESETS.find(p => p.id === k);
+                return (
+                  <div key={k}>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="flex items-center gap-2"><span>{preset?.icon}</span><span>{preset?.label}</span></span>
+                      <span className="tv-muted">{v} events</span>
+                    </div>
+                    <div className="h-1.5 bg-[#0a0c10] rounded overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-[var(--tv-gold)] to-amber-300" style={{ width: `${(v / maxPresetCount) * 100}%` }}></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="tv-panel rounded-lg p-5">
+            <h3 className="font-semibold mb-4">Operational benchmarks</h3>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center justify-between py-2 border-b tv-divider">
+                <span className="tv-muted">Avg. setup time per event</span>
+                <span className="font-medium">4.2 hrs</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b tv-divider">
+                <span className="tv-muted">Avg. teardown time</span>
+                <span className="font-medium">2.1 hrs</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b tv-divider">
+                <span className="tv-muted">AV failure incidents</span>
+                <span className="font-medium text-emerald-400">0</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b tv-divider">
+                <span className="tv-muted">Client repeat-booking rate</span>
+                <span className="font-medium">62%</span>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <span className="tv-muted">NPS (last 90 days)</span>
+                <span className="font-medium tv-gold">+71</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// APP
+// ============================================================
+
+function App() {
+  const [view, setView] = useState('dashboard');
+  const [events] = useState(SAMPLE_EVENTS);
+  const [currentEvent, setCurrentEvent] = useState(null);
+
+  const openEvent = (e) => {
+    setCurrentEvent(e);
+    setView('designer');
+  };
+
+  const newEvent = () => {
+    setCurrentEvent({ name: 'New Event', client: '', guests: 200, space: 'A', preset: null });
+    setView('designer');
+  };
+
+  return (
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar active={view} onNav={(v) => { setView(v); if (v === 'designer' && !currentEvent) setCurrentEvent({ name: 'New Event', client: '', guests: 200, space: 'A', preset: null }); }} />
+      <main className="flex-1 flex flex-col overflow-hidden">
+        {view === 'dashboard' && <Dashboard events={events} onOpenEvent={openEvent} onNewEvent={newEvent} onNav={setView} />}
+        {view === 'designer' && <Designer events={events} currentEvent={currentEvent} />}
+        {view === 'events' && <EventsScreen events={events} onOpenEvent={openEvent} onNewEvent={newEvent} />}
+        {view === 'inventory' && <Inventory />}
+        {view === 'reports' && <Reports events={events} />}
+      </main>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
