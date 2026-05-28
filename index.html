@@ -64,6 +64,23 @@
   .badge-green { background: rgba(78,163,108,0.15); color: var(--tv-green); border: 1px solid rgba(78,163,108,0.3); }
   .badge-red { background: rgba(179,37,59,0.15); color: #e76072; border: 1px solid rgba(179,37,59,0.3); }
   .badge-muted { background: rgba(139,145,163,0.1); color: var(--tv-muted); border: 1px solid var(--tv-line); }
+
+  /* Mobile helpers */
+  .no-touch-action { touch-action: none; -webkit-user-select: none; user-select: none; }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .safe-top    { padding-top: env(safe-area-inset-top, 0px); }
+  @media (max-width: 768px) {
+    /* Larger tap targets on mobile */
+    button, select, input { font-size: 14px; }
+    /* Prevent iOS auto-zoom on input focus (needs >= 16px) */
+    input, select, textarea { font-size: 16px; }
+  }
+  /* Bottom sheet slide-up */
+  .sheet-enter { transform: translateY(100%); }
+  .sheet-shown { transform: translateY(0); transition: transform 220ms cubic-bezier(.2,.8,.2,1); }
+  .drawer-enter { transform: translateX(-100%); }
+  .drawer-shown { transform: translateX(0); transition: transform 220ms cubic-bezier(.2,.8,.2,1); }
+  .backdrop { background: rgba(0,0,0,0.55); }
 </style>
 </head>
 <body>
@@ -71,6 +88,29 @@
 
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+// ============================================================
+// MOBILE DETECTION
+// ============================================================
+const MOBILE_BREAKPOINT = 768;
+function useIsMobile() {
+  const get = () => (typeof window !== 'undefined' && window.matchMedia)
+    ? window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches
+    : false;
+  const [isMobile, setIsMobile] = useState(get);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
+    const onChange = (e) => setIsMobile(e.matches);
+    if (mq.addEventListener) mq.addEventListener('change', onChange);
+    else mq.addListener(onChange);
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener('change', onChange);
+      else mq.removeListener(onChange);
+    };
+  }, []);
+  return isMobile;
+}
 
 // ============================================================
 // DATA
@@ -340,7 +380,7 @@ function classNames(...c) { return c.filter(Boolean).join(' '); }
 // COMPONENTS
 // ============================================================
 
-function Sidebar({ active, onNav }) {
+function Sidebar({ active, onNav, isMobile, onClose }) {
   const items = [
     { id: 'dashboard', label: 'Dashboard', icon: '◫' },
     { id: 'designer', label: 'Layout Designer', icon: '✦' },
@@ -348,9 +388,16 @@ function Sidebar({ active, onNav }) {
     { id: 'inventory', label: 'Inventory', icon: '⊞' },
     { id: 'reports', label: 'Reports', icon: '◆' },
   ];
+  const handleNav = (id) => {
+    onNav(id);
+    if (isMobile && onClose) onClose();
+  };
   return (
-    <aside className="w-60 tv-panel border-r flex flex-col flex-shrink-0">
-      <div className="px-5 py-5 border-b tv-divider">
+    <aside className={classNames(
+      "tv-panel border-r flex flex-col",
+      isMobile ? "w-64 h-full" : "w-60 flex-shrink-0"
+    )}>
+      <div className="px-5 py-5 border-b tv-divider flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded tv-gold-bg flex items-center justify-center font-bold text-sm">TV</div>
           <div>
@@ -358,12 +405,15 @@ function Sidebar({ active, onNav }) {
             <div className="text-[10px] tv-muted uppercase tracking-wider">Event Designer</div>
           </div>
         </div>
+        {isMobile && (
+          <button onClick={onClose} aria-label="Close menu" className="w-8 h-8 rounded tv-panel-2 border tv-divider flex items-center justify-center text-base">✕</button>
+        )}
       </div>
-      <nav className="flex-1 p-3 space-y-1">
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {items.map(it => (
           <button
             key={it.id}
-            onClick={() => onNav(it.id)}
+            onClick={() => handleNav(it.id)}
             className={classNames(
               "w-full flex items-center gap-3 px-3 py-2 rounded text-sm text-left transition",
               active === it.id
@@ -376,7 +426,7 @@ function Sidebar({ active, onNav }) {
           </button>
         ))}
       </nav>
-      <div className="p-4 border-t tv-divider">
+      <div className="p-4 border-t tv-divider safe-bottom">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-700 flex items-center justify-center text-xs font-semibold">AK</div>
           <div className="text-xs">
@@ -389,24 +439,36 @@ function Sidebar({ active, onNav }) {
   );
 }
 
+function MobileTopBar({ onMenu, title }) {
+  return (
+    <div className="flex items-center gap-3 px-4 py-3 border-b tv-divider tv-panel flex-shrink-0 safe-top">
+      <button onClick={onMenu} aria-label="Open menu" className="w-9 h-9 rounded tv-panel-2 border tv-divider flex items-center justify-center text-lg">☰</button>
+      <div className="flex items-center gap-2">
+        <div className="w-7 h-7 rounded tv-gold-bg flex items-center justify-center font-bold text-xs">TV</div>
+        <div className="font-semibold text-sm tracking-wide truncate">{title || 'TRIVISION'}</div>
+      </div>
+    </div>
+  );
+}
+
 function TopBar({ title, subtitle, right }) {
   return (
-    <div className="px-8 py-5 border-b tv-divider flex items-center justify-between flex-shrink-0">
-      <div>
-        <h1 className="text-xl font-semibold">{title}</h1>
-        {subtitle && <div className="text-sm tv-muted mt-0.5">{subtitle}</div>}
+    <div className="px-4 sm:px-8 py-4 sm:py-5 border-b tv-divider flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-shrink-0">
+      <div className="min-w-0">
+        <h1 className="text-lg sm:text-xl font-semibold truncate">{title}</h1>
+        {subtitle && <div className="text-xs sm:text-sm tv-muted mt-0.5">{subtitle}</div>}
       </div>
-      <div className="flex items-center gap-3">{right}</div>
+      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">{right}</div>
     </div>
   );
 }
 
 function StatCard({ label, value, sub, accent }) {
   return (
-    <div className="tv-panel rounded-lg p-5">
-      <div className="text-xs tv-muted uppercase tracking-wider">{label}</div>
-      <div className={classNames("text-3xl font-semibold mt-2", accent || "")}>{value}</div>
-      {sub && <div className="text-xs tv-muted mt-1">{sub}</div>}
+    <div className="tv-panel rounded-lg p-3 sm:p-5">
+      <div className="text-[10px] sm:text-xs tv-muted uppercase tracking-wider">{label}</div>
+      <div className={classNames("text-2xl sm:text-3xl font-semibold mt-1 sm:mt-2", accent || "")}>{value}</div>
+      {sub && <div className="text-[10px] sm:text-xs tv-muted mt-1">{sub}</div>}
     </div>
   );
 }
@@ -415,7 +477,7 @@ function StatCard({ label, value, sub, accent }) {
 // DASHBOARD
 // ============================================================
 
-function Dashboard({ events, onOpenEvent, onNewEvent, onNav }) {
+function Dashboard({ events, onOpenEvent, onNewEvent, onNav, isMobile }) {
   const upcoming = events.filter(e => new Date(e.date) >= new Date('2026-05-15')).sort((a,b) => a.date.localeCompare(b.date));
   const totalGuests = upcoming.reduce((a, e) => a + e.guests, 0);
   return (
@@ -434,16 +496,16 @@ function Dashboard({ events, onOpenEvent, onNewEvent, onNav }) {
           </>
         }
       />
-      <div className="flex-1 overflow-auto scroll-thin p-8 space-y-8">
-        <div className="grid grid-cols-4 gap-4">
+      <div className="flex-1 overflow-auto scroll-thin p-4 sm:p-8 space-y-6 sm:space-y-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <StatCard label="Confirmed Events" value={events.filter(e => e.status === 'Confirmed').length} sub="Next 60 days" accent="tv-gold" />
           <StatCard label="Holds / Tentative" value={events.filter(e => e.status !== 'Confirmed').length} sub="Awaiting confirmation" />
           <StatCard label="Total Guests Booked" value={totalGuests.toLocaleString()} sub="Across upcoming events" />
           <StatCard label="Avg. Setup Time" value="4.2h" sub="Down 18% vs Q1" accent="text-emerald-400" />
         </div>
 
-        <div className="grid grid-cols-3 gap-6">
-          <div className="col-span-2 tv-panel rounded-lg">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="lg:col-span-2 tv-panel rounded-lg">
             <div className="px-5 py-4 border-b tv-divider flex items-center justify-between">
               <div>
                 <h2 className="font-semibold">Upcoming events</h2>
@@ -456,22 +518,23 @@ function Dashboard({ events, onOpenEvent, onNewEvent, onNav }) {
                 <button
                   key={e.id}
                   onClick={() => onOpenEvent(e)}
-                  className="w-full px-5 py-4 flex items-center gap-4 hover:bg-[#1d212d] text-left"
+                  className="w-full px-4 sm:px-5 py-3 sm:py-4 flex items-center gap-3 sm:gap-4 hover:bg-[#1d212d] text-left"
                 >
-                  <div className="flex flex-col items-center justify-center w-14 h-14 rounded tv-panel-2 border tv-divider">
+                  <div className="flex flex-col items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded tv-panel-2 border tv-divider flex-shrink-0">
                     <div className="text-[10px] tv-muted uppercase">{new Date(e.date).toLocaleString('en-US', { month: 'short' })}</div>
-                    <div className="text-xl font-semibold tv-gold leading-tight">{new Date(e.date).getDate()}</div>
+                    <div className="text-lg sm:text-xl font-semibold tv-gold leading-tight">{new Date(e.date).getDate()}</div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{e.name}</div>
-                    <div className="text-xs tv-muted mt-0.5">{e.client} · {e.type}</div>
+                    <div className="font-medium truncate text-sm sm:text-base">{e.name}</div>
+                    <div className="text-xs tv-muted mt-0.5 truncate">{e.client} · {e.type}</div>
+                    <div className="text-[10px] tv-muted mt-0.5 sm:hidden">{e.guests} guests · Space {e.space}</div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right hidden sm:block">
                     <div className="text-sm font-medium">{e.guests} guests</div>
                     <div className="text-xs tv-muted">Space {e.space} · {PRESETS.find(p => p.id === e.preset)?.label}</div>
                   </div>
                   <span className={classNames(
-                    "badge",
+                    "badge flex-shrink-0",
                     e.status === 'Confirmed' ? 'badge-green' :
                     e.status === 'Hold' ? 'badge-gold' : 'badge-muted'
                   )}>
@@ -538,7 +601,7 @@ function Dashboard({ events, onOpenEvent, onNewEvent, onNav }) {
 // EVENTS LIST
 // ============================================================
 
-function EventsScreen({ events, onOpenEvent, onNewEvent }) {
+function EventsScreen({ events, onOpenEvent, onNewEvent, isMobile }) {
   const [filter, setFilter] = useState('all');
   const filtered = filter === 'all' ? events : events.filter(e => e.status.toLowerCase() === filter);
   return (
@@ -558,8 +621,34 @@ function EventsScreen({ events, onOpenEvent, onNewEvent }) {
           </>
         }
       />
-      <div className="flex-1 overflow-auto scroll-thin p-8">
-        <div className="tv-panel rounded-lg overflow-hidden">
+      <div className="flex-1 overflow-auto scroll-thin p-4 sm:p-8">
+        {/* Mobile: card list */}
+        <div className="space-y-2 sm:hidden">
+          {filtered.map(e => (
+            <button key={e.id} onClick={() => onOpenEvent(e)}
+              className="w-full tv-panel rounded-lg p-4 text-left hover:bg-[#1d212d]">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-medium truncate">{e.name}</div>
+                  <div className="text-xs tv-muted truncate">{e.client}</div>
+                </div>
+                <span className={classNames(
+                  "badge flex-shrink-0",
+                  e.status === 'Confirmed' ? 'badge-green' :
+                  e.status === 'Hold' ? 'badge-gold' : 'badge-muted'
+                )}>{e.status}</span>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                <div><span className="tv-muted">Date · </span>{new Date(e.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                <div><span className="tv-muted">Space · </span>{e.space}</div>
+                <div><span className="tv-muted">Guests · </span>{e.guests}</div>
+                <div><span className="tv-muted">Layout · </span>{PRESETS.find(p => p.id === e.preset)?.label || '—'}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+        {/* Desktop: full table */}
+        <div className="tv-panel rounded-lg overflow-hidden hidden sm:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-xs uppercase tracking-wider tv-muted border-b tv-divider">
@@ -796,7 +885,7 @@ function disposeGroup(group) {
   });
 }
 
-function FloorPlanCanvas({ space, items, onMove, onSelect, selectedId, onDeselect }) {
+function FloorPlanCanvas({ space, items, onMove, onSelect, selectedId, onDeselect, isMobile }) {
   const containerRef = useRef(null);
   const stateRef = useRef({
     scene: null,
@@ -1113,6 +1202,126 @@ function FloorPlanCanvas({ space, items, onMove, onSelect, selectedId, onDeselec
     dom.addEventListener('contextmenu', onContextMenu);
     window.addEventListener('resize', onResize);
 
+    // ====== TOUCH HANDLERS (mobile) ======
+    // 1 finger: if it lands on an item, drag it. Otherwise orbit the camera.
+    // 2 fingers: pinch to zoom + drag midpoint to orbit.
+    const touchState = { mode: null, lastDist: 0, lastMid: null };
+    const dist2 = (a, b) => {
+      const dx = a.clientX - b.clientX;
+      const dy = a.clientY - b.clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    };
+    const mid2 = (a, b) => ({ x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 });
+
+    const onTouchStart = (e) => {
+      if (e.touches.length === 1) {
+        // Map first touch to NDC for picking
+        const t = e.touches[0];
+        const rect = dom.getBoundingClientRect();
+        mouse.x = ((t.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((t.clientY - rect.top) / rect.height) * 2 + 1;
+        const id = findItemHit();
+        if (id) {
+          stateRef.current.callbacks.onSelect(id);
+          stateRef.current.dragging = { id };
+          touchState.mode = 'drag';
+        } else {
+          stateRef.current.callbacks.onDeselect();
+          stateRef.current.orbiting = { x: t.clientX, y: t.clientY };
+          touchState.mode = 'orbit';
+        }
+        e.preventDefault();
+      } else if (e.touches.length === 2) {
+        // Two-finger gesture: pinch + orbit
+        stateRef.current.dragging = null;
+        stateRef.current.orbiting = null;
+        touchState.mode = 'pinch';
+        touchState.lastDist = dist2(e.touches[0], e.touches[1]);
+        touchState.lastMid = mid2(e.touches[0], e.touches[1]);
+        e.preventDefault();
+      }
+    };
+
+    const onTouchMove = (e) => {
+      if (touchState.mode === 'drag' && e.touches.length === 1) {
+        const t = e.touches[0];
+        const rect = dom.getBoundingClientRect();
+        mouse.x = ((t.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((t.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+        const hits = raycaster.intersectObject(floor, false);
+        if (hits.length > 0 && stateRef.current.dragging) {
+          const p = hits[0].point;
+          const xFt = p.x + space.widthFt / 2;
+          const yFt = p.z + space.depthFt / 2;
+          const item = stateRef.current.itemsCache.find(it => it.id === stateRef.current.dragging.id);
+          if (item) {
+            const f = FURN_BY_ID[item.furnId];
+            const swap = item.rotation === 90 || item.rotation === 270;
+            const w = f.shape === 'circle' ? f.diameter : (swap ? f.h : f.w);
+            const h = f.shape === 'circle' ? f.diameter : (swap ? f.w : f.h);
+            stateRef.current.callbacks.onMove(stateRef.current.dragging.id, xFt - w / 2, yFt - h / 2);
+          }
+        }
+        e.preventDefault();
+      } else if (touchState.mode === 'orbit' && e.touches.length === 1) {
+        const t = e.touches[0];
+        if (stateRef.current.orbiting) {
+          const dx = t.clientX - stateRef.current.orbiting.x;
+          const dy = t.clientY - stateRef.current.orbiting.y;
+          stateRef.current.orbiting.x = t.clientX;
+          stateRef.current.orbiting.y = t.clientY;
+          orbit.azimuth -= dx * 0.008;
+          orbit.polar -= dy * 0.008;
+          orbit.polar = Math.max(0.02, Math.min(Math.PI / 2 - 0.05, orbit.polar));
+          updateOrbitCamera(camera, orbit);
+        }
+        e.preventDefault();
+      } else if (touchState.mode === 'pinch' && e.touches.length === 2) {
+        const newDist = dist2(e.touches[0], e.touches[1]);
+        const newMid = mid2(e.touches[0], e.touches[1]);
+        if (touchState.lastDist > 0) {
+          const ratio = touchState.lastDist / newDist;
+          orbit.distance *= ratio;
+          orbit.distance = Math.max(20, Math.min(220, orbit.distance));
+        }
+        // Two-finger drag also orbits
+        if (touchState.lastMid) {
+          const dx = newMid.x - touchState.lastMid.x;
+          const dy = newMid.y - touchState.lastMid.y;
+          orbit.azimuth -= dx * 0.008;
+          orbit.polar -= dy * 0.008;
+          orbit.polar = Math.max(0.02, Math.min(Math.PI / 2 - 0.05, orbit.polar));
+        }
+        touchState.lastDist = newDist;
+        touchState.lastMid = newMid;
+        updateOrbitCamera(camera, orbit);
+        e.preventDefault();
+      }
+    };
+
+    const onTouchEnd = (e) => {
+      if (e.touches.length === 0) {
+        stateRef.current.dragging = null;
+        stateRef.current.orbiting = null;
+        touchState.mode = null;
+        touchState.lastDist = 0;
+        touchState.lastMid = null;
+      } else if (e.touches.length === 1 && touchState.mode === 'pinch') {
+        // Transition from pinch to single-finger orbit
+        const t = e.touches[0];
+        touchState.mode = 'orbit';
+        stateRef.current.orbiting = { x: t.clientX, y: t.clientY };
+        touchState.lastDist = 0;
+        touchState.lastMid = null;
+      }
+    };
+
+    dom.addEventListener('touchstart', onTouchStart, { passive: false });
+    dom.addEventListener('touchmove', onTouchMove, { passive: false });
+    dom.addEventListener('touchend', onTouchEnd);
+    dom.addEventListener('touchcancel', onTouchEnd);
+
     // Animation loop
     const animate = () => {
       stateRef.current.animId = requestAnimationFrame(animate);
@@ -1128,6 +1337,10 @@ function FloorPlanCanvas({ space, items, onMove, onSelect, selectedId, onDeselec
       dom.removeEventListener('wheel', onWheel);
       dom.removeEventListener('contextmenu', onContextMenu);
       window.removeEventListener('resize', onResize);
+      dom.removeEventListener('touchstart', onTouchStart);
+      dom.removeEventListener('touchmove', onTouchMove);
+      dom.removeEventListener('touchend', onTouchEnd);
+      dom.removeEventListener('touchcancel', onTouchEnd);
       scene.traverse(obj => {
         if (obj.geometry) obj.geometry.dispose();
         if (obj.material) {
@@ -1193,13 +1406,20 @@ function FloorPlanCanvas({ space, items, onMove, onSelect, selectedId, onDeselec
   };
 
   return (
-    <div className="relative w-full h-full" style={{ minHeight: 540 }}>
-      <div ref={containerRef} className="w-full h-full" style={{ minHeight: 540 }} />
-      <div className="absolute top-3 left-3 text-[10px] tv-muted bg-[#0a0c10]/80 backdrop-blur px-2 py-1.5 rounded border tv-divider pointer-events-none">
-        <div><span className="tv-gold">L-click item</span> · select / drag</div>
-        <div><span className="tv-gold">R-click drag</span> · orbit camera</div>
-        <div><span className="tv-gold">Scroll</span> · zoom</div>
-      </div>
+    <div className="relative w-full h-full no-touch-action" style={{ minHeight: isMobile ? 320 : 540 }}>
+      <div ref={containerRef} className="w-full h-full no-touch-action" style={{ minHeight: isMobile ? 320 : 540 }} />
+      {!isMobile ? (
+        <div className="absolute top-3 left-3 text-[10px] tv-muted bg-[#0a0c10]/80 backdrop-blur px-2 py-1.5 rounded border tv-divider pointer-events-none">
+          <div><span className="tv-gold">L-click item</span> · select / drag</div>
+          <div><span className="tv-gold">R-click drag</span> · orbit camera</div>
+          <div><span className="tv-gold">Scroll</span> · zoom</div>
+        </div>
+      ) : (
+        <div className="absolute top-2 left-2 text-[9px] tv-muted bg-[#0a0c10]/80 backdrop-blur px-2 py-1 rounded border tv-divider pointer-events-none">
+          <div><span className="tv-gold">Tap</span> item · drag to move</div>
+          <div><span className="tv-gold">Pinch</span> · zoom · <span className="tv-gold">2-finger drag</span> · orbit</div>
+        </div>
+      )}
       <div className="absolute top-3 right-3 flex flex-col items-end gap-2">
         <div className="text-[10px] tv-muted bg-[#0a0c10]/80 backdrop-blur px-2 py-1.5 rounded border tv-divider pointer-events-none">
           <div className="tv-gold font-medium">{space.name}</div>
@@ -1233,7 +1453,7 @@ function FloorPlanCanvas({ space, items, onMove, onSelect, selectedId, onDeselec
   );
 }
 
-function Designer({ events, currentEvent, onSaveEvent }) {
+function Designer({ events, currentEvent, onSaveEvent, isMobile }) {
   const [spaceId, setSpaceId] = useState(currentEvent?.space || 'A');
   const space = SPACES[spaceId];
   const [items, setItems] = useState([]);
@@ -1331,6 +1551,264 @@ function Designer({ events, currentEvent, onSaveEvent }) {
     setTimeout(() => setShowSaved(false), 2000);
   };
 
+  // Mobile bottom-sheet tab state
+  const [mobileTab, setMobileTab] = useState(null); // null | 'setup' | 'items' | 'props'
+  // When the user selects an item on mobile, auto-open the props sheet so they can edit it.
+  useEffect(() => {
+    if (isMobile && selectedId) setMobileTab('props');
+    // eslint-disable-next-line
+  }, [selectedId, isMobile]);
+
+  // Reusable panel contents as render functions
+  const renderSetupPanel = () => (
+    <div className="flex flex-col">
+      <div className="p-4 border-b tv-divider">
+        <div className="text-xs uppercase tv-muted tracking-wider mb-2">Event</div>
+        <input value={eventName} onChange={e => setEventName(e.target.value)} className="w-full mb-2 text-sm font-medium" />
+        <input value={eventClient} onChange={e => setEventClient(e.target.value)} placeholder="Client name" className="w-full mb-2 text-xs" />
+        <div className="flex items-center gap-2">
+          <select value={spaceId} onChange={e => setSpaceId(e.target.value)} className="flex-1 text-xs">
+            <option value="A">Space A — Ballroom</option>
+            <option value="B">Space B — Buffet/Breakout</option>
+            <option value="C">Space C — Breakout Room</option>
+          </select>
+          <input type="number" value={eventGuests} onChange={e => setEventGuests(Number(e.target.value))} className="w-20 text-xs" />
+        </div>
+      </div>
+      <div className="p-4">
+        <div className="text-xs uppercase tv-muted tracking-wider mb-2">Quick presets</div>
+        <div className="grid grid-cols-2 gap-2">
+          {PRESETS.map(p => (
+            <button key={p.id} onClick={() => applyPreset(p.id)}
+              className="tv-panel-2 border tv-divider rounded p-2 text-left hover:border-[var(--tv-gold)]">
+              <div className="text-base">{p.icon}</div>
+              <div className="text-xs font-medium mt-0.5">{p.label}</div>
+              <div className="text-[10px] tv-muted">{p.desc}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderItemsPanel = () => (
+    <div className="p-4">
+      <div className="text-xs uppercase tv-muted tracking-wider mb-2">Add furniture</div>
+      <div className="space-y-1">
+        {FURNITURE_LIBRARY.map(f => (
+          <button key={f.id} onClick={() => addItem(f.id)}
+            className="w-full flex items-center gap-3 px-2 py-2 rounded hover:bg-[#1d212d] text-left">
+            <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0"
+                 style={{ background: f.color }}>
+              {f.shape === 'circle' && <div className="w-5 h-5 rounded-full border border-white/30"></div>}
+              {f.shape === 'rect' && <div className="w-5 h-3 border border-white/30 rounded-sm"></div>}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-medium truncate">{f.label}</div>
+              <div className="text-[10px] tv-muted">
+                {f.shape === 'circle' ? `${f.diameter}' dia` : `${f.w}'×${f.h}'`}
+                {f.capacity > 0 ? ` · seats ${f.capacity}` : ''}
+              </div>
+            </div>
+            <span className="text-xs tv-muted">+</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderPropsPanel = () => (
+    <div className="flex flex-col">
+      <div className="p-5 border-b tv-divider">
+        <div className="text-xs uppercase tv-muted tracking-wider mb-3">Capacity</div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <div className="text-2xl font-semibold tv-gold">{stats.capacity}</div>
+            <div className="text-[10px] tv-muted uppercase tracking-wider">Seats</div>
+          </div>
+          <div>
+            <div className="text-2xl font-semibold">{stats.tables}</div>
+            <div className="text-[10px] tv-muted uppercase tracking-wider">Tables</div>
+          </div>
+          <div>
+            <div className="text-2xl font-semibold">{stats.chairs}</div>
+            <div className="text-[10px] tv-muted uppercase tracking-wider">Chairs</div>
+          </div>
+          <div>
+            <div className="text-2xl font-semibold">{stats.total}</div>
+            <div className="text-[10px] tv-muted uppercase tracking-wider">Total items</div>
+          </div>
+        </div>
+        <div className="mt-4 pt-4 border-t tv-divider">
+          <div className="flex items-center justify-between text-xs">
+            <span className="tv-muted">Guest count target</span>
+            <span className="font-medium">{eventGuests}</span>
+          </div>
+          <div className="mt-2 h-2 bg-[#0a0c10] rounded overflow-hidden">
+            <div className={classNames(
+              "h-full transition-all",
+              stats.capacity >= eventGuests ? "bg-emerald-500" : "bg-amber-500"
+            )} style={{ width: `${Math.min(100, (stats.capacity / eventGuests) * 100)}%` }}></div>
+          </div>
+          <div className="text-[10px] tv-muted mt-1">
+            {stats.capacity >= eventGuests
+              ? `✓ ${stats.capacity - eventGuests} seats over target`
+              : `${eventGuests - stats.capacity} seats short of target`}
+          </div>
+        </div>
+      </div>
+      <div className="p-5 border-b tv-divider">
+        <div className="text-xs uppercase tv-muted tracking-wider mb-3">Selected item</div>
+        {selected && selectedFurn ? (
+          <div className="space-y-3">
+            <div>
+              <div className="font-medium text-sm">{selectedFurn.label}</div>
+              <div className="text-xs tv-muted">
+                {selectedFurn.shape === 'circle' ? `${selectedFurn.diameter}' diameter` : `${selectedFurn.w}'×${selectedFurn.h}'`}
+                {selectedFurn.capacity > 0 ? ` · seats ${selectedFurn.capacity}` : ''}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] tv-muted uppercase tracking-wider">X (ft)</label>
+                <div className="text-sm font-medium">{selected.xFt.toFixed(1)}</div>
+              </div>
+              <div>
+                <label className="text-[10px] tv-muted uppercase tracking-wider">Y (ft)</label>
+                <div className="text-sm font-medium">{selected.yFt.toFixed(1)}</div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              {selectedFurn.shape === 'rect' && (
+                <button onClick={() => rotateItem(selected.id)} className="flex-1 px-2 py-1.5 text-xs tv-panel-2 border tv-divider rounded hover:border-[var(--tv-gold)]">⟳ Rotate</button>
+              )}
+              <button onClick={() => duplicateItem(selected.id)} className="flex-1 px-2 py-1.5 text-xs tv-panel-2 border tv-divider rounded hover:border-[var(--tv-gold)]">⎘ Duplicate</button>
+              <button onClick={() => deleteItem(selected.id)} className="flex-1 px-2 py-1.5 text-xs rounded tv-red-bg">✕ Delete</button>
+            </div>
+          </div>
+        ) : (
+          <div className="text-xs tv-muted">Tap an item on the floor to edit, rotate, or duplicate it.</div>
+        )}
+      </div>
+      <div className="p-5">
+        <div className="text-xs uppercase tv-muted tracking-wider mb-3">Compliance check</div>
+        <div className="space-y-2 text-xs">
+          <div className="flex items-start gap-2">
+            <span className="text-emerald-400 mt-0.5">✓</span>
+            <div>
+              <div>Aisle clearance ≥ 4 ft</div>
+              <div className="tv-muted text-[10px]">Confirmed for preset layouts</div>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-emerald-400 mt-0.5">✓</span>
+            <div>
+              <div>Stage sightlines unobstructed</div>
+              <div className="tv-muted text-[10px]">All chairs face stage zone</div>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className={stats.capacity >= eventGuests ? "text-emerald-400 mt-0.5" : "text-amber-400 mt-0.5"}>
+              {stats.capacity >= eventGuests ? '✓' : '!'}
+            </span>
+            <div>
+              <div>Guest capacity target</div>
+              <div className="tv-muted text-[10px]">{stats.capacity} / {eventGuests}</div>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-emerald-400 mt-0.5">✓</span>
+            <div>
+              <div>Loading dock access clear</div>
+              <div className="tv-muted text-[10px]">No items in dock approach</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Floor canvas + footer label
+  const floorCanvas = (
+    <div className="flex-1 flex flex-col bg-[#0a0c10] overflow-hidden">
+      <div className="flex-1 relative min-h-0">
+        <FloorPlanCanvas
+          space={space}
+          items={items}
+          onMove={moveItem}
+          onSelect={setSelectedId}
+          selectedId={selectedId}
+          onDeselect={() => setSelectedId(null)}
+          isMobile={isMobile}
+        />
+      </div>
+      {!isMobile && (
+        <div className="text-center py-2 text-xs tv-muted border-t tv-divider flex-shrink-0">
+          ↑ Main Stage / LED Video Wall · ↓ Audience Entrance · 3D View — drag to orbit, scroll to zoom
+        </div>
+      )}
+    </div>
+  );
+
+  // ====== MOBILE LAYOUT ======
+  if (isMobile) {
+    const TAB_LABELS = { setup: 'Setup', items: 'Items', props: 'Props' };
+    const sheetContent = mobileTab === 'setup' ? renderSetupPanel()
+      : mobileTab === 'items' ? renderItemsPanel()
+      : mobileTab === 'props' ? renderPropsPanel()
+      : null;
+    return (
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Compact action bar */}
+        <div className="flex items-center gap-2 px-3 py-2 border-b tv-divider flex-shrink-0 overflow-x-auto">
+          <button onClick={clearAll} className="px-2.5 py-1.5 text-xs rounded border tv-divider tv-panel-2 flex-shrink-0">Clear</button>
+          <button className="px-2.5 py-1.5 text-xs rounded border tv-divider tv-panel-2 flex-shrink-0">Export PDF</button>
+          <button onClick={handleSave} className="px-3 py-1.5 text-xs tv-gold-bg font-medium rounded flex-shrink-0 ml-auto">
+            {showSaved ? '✓ Saved' : 'Save'}
+          </button>
+        </div>
+
+        {/* 3D scene always full-bleed */}
+        <div className="flex-1 relative flex flex-col overflow-hidden min-h-0">
+          {floorCanvas}
+        </div>
+
+        {/* Bottom tab bar */}
+        <div className="flex border-t tv-divider tv-panel flex-shrink-0 safe-bottom">
+          {['setup', 'items', 'props'].map(t => (
+            <button
+              key={t}
+              onClick={() => setMobileTab(mobileTab === t ? null : t)}
+              className={classNames(
+                "flex-1 py-3 text-xs font-medium border-r tv-divider last:border-r-0",
+                mobileTab === t ? "tv-gold bg-[#1d212d]" : "tv-muted"
+              )}
+            >
+              {TAB_LABELS[t]}
+            </button>
+          ))}
+        </div>
+
+        {/* Slide-up sheet */}
+        {mobileTab && (
+          <div className="fixed inset-0 z-30 flex flex-col">
+            <div className="backdrop flex-1" onClick={() => setMobileTab(null)} />
+            <div className="tv-panel border-t tv-divider rounded-t-xl shadow-2xl max-h-[70vh] flex flex-col">
+              <div className="flex items-center justify-between px-4 py-3 border-b tv-divider flex-shrink-0">
+                <div className="text-sm font-semibold">{TAB_LABELS[mobileTab]}</div>
+                <button onClick={() => setMobileTab(null)} aria-label="Close" className="w-8 h-8 rounded tv-panel-2 border tv-divider flex items-center justify-center text-base">✕</button>
+              </div>
+              <div className="flex-1 overflow-auto scroll-thin safe-bottom">
+                {sheetContent}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ====== DESKTOP LAYOUT (unchanged 3-column) ======
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <TopBar
@@ -1349,187 +1827,19 @@ function Designer({ events, currentEvent, onSaveEvent }) {
 
       <div className="flex-1 flex overflow-hidden">
         {/* LEFT: Furniture library + Event info */}
-        <div className="w-72 tv-panel border-r tv-divider flex flex-col flex-shrink-0">
-          <div className="p-4 border-b tv-divider">
-            <div className="text-xs uppercase tv-muted tracking-wider mb-2">Event</div>
-            <input value={eventName} onChange={e => setEventName(e.target.value)} className="w-full mb-2 text-sm font-medium" />
-            <input value={eventClient} onChange={e => setEventClient(e.target.value)} placeholder="Client name" className="w-full mb-2 text-xs" />
-            <div className="flex items-center gap-2">
-              <select value={spaceId} onChange={e => setSpaceId(e.target.value)} className="flex-1 text-xs">
-                <option value="A">Space A — Ballroom</option>
-                <option value="B">Space B — Buffet/Breakout</option>
-                <option value="C">Space C — Breakout Room</option>
-              </select>
-              <input type="number" value={eventGuests} onChange={e => setEventGuests(Number(e.target.value))} className="w-16 text-xs" />
-            </div>
-          </div>
-
-          <div className="p-4 border-b tv-divider">
-            <div className="text-xs uppercase tv-muted tracking-wider mb-2">Quick presets</div>
-            <div className="grid grid-cols-2 gap-2">
-              {PRESETS.map(p => (
-                <button key={p.id} onClick={() => applyPreset(p.id)}
-                  className="tv-panel-2 border tv-divider rounded p-2 text-left hover:border-[var(--tv-gold)]">
-                  <div className="text-base">{p.icon}</div>
-                  <div className="text-xs font-medium mt-0.5">{p.label}</div>
-                  <div className="text-[10px] tv-muted">{p.desc}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-auto scroll-thin p-4">
-            <div className="text-xs uppercase tv-muted tracking-wider mb-2">Add furniture</div>
-            <div className="space-y-1">
-              {FURNITURE_LIBRARY.map(f => (
-                <button key={f.id} onClick={() => addItem(f.id)}
-                  className="w-full flex items-center gap-3 px-2 py-2 rounded hover:bg-[#1d212d] text-left">
-                  <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0"
-                       style={{ background: f.color }}>
-                    {f.shape === 'circle' && <div className="w-5 h-5 rounded-full border border-white/30"></div>}
-                    {f.shape === 'rect' && <div className="w-5 h-3 border border-white/30 rounded-sm"></div>}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium truncate">{f.label}</div>
-                    <div className="text-[10px] tv-muted">
-                      {f.shape === 'circle' ? `${f.diameter}' dia` : `${f.w}'×${f.h}'`}
-                      {f.capacity > 0 ? ` · seats ${f.capacity}` : ''}
-                    </div>
-                  </div>
-                  <span className="text-xs tv-muted">+</span>
-                </button>
-              ))}
-            </div>
+        <div className="w-72 tv-panel border-r tv-divider flex flex-col flex-shrink-0 overflow-y-auto scroll-thin">
+          {renderSetupPanel()}
+          <div className="border-t tv-divider">
+            {renderItemsPanel()}
           </div>
         </div>
 
         {/* CENTER: 3D Floor plan canvas */}
-        <div className="flex-1 flex flex-col bg-[#0a0c10] overflow-hidden">
-          <div className="flex-1 relative min-h-0">
-            <FloorPlanCanvas
-              space={space}
-              items={items}
-              onMove={moveItem}
-              onSelect={setSelectedId}
-              selectedId={selectedId}
-              onDeselect={() => setSelectedId(null)}
-            />
-          </div>
-          <div className="text-center py-2 text-xs tv-muted border-t tv-divider flex-shrink-0">
-            ↑ Main Stage / LED Video Wall · ↓ Audience Entrance · 3D View — drag to orbit, scroll to zoom
-          </div>
-        </div>
+        {floorCanvas}
 
         {/* RIGHT: Stats + selected item editor */}
-        <div className="w-72 tv-panel border-l tv-divider flex flex-col flex-shrink-0">
-          <div className="p-5 border-b tv-divider">
-            <div className="text-xs uppercase tv-muted tracking-wider mb-3">Capacity</div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <div className="text-2xl font-semibold tv-gold">{stats.capacity}</div>
-                <div className="text-[10px] tv-muted uppercase tracking-wider">Seats</div>
-              </div>
-              <div>
-                <div className="text-2xl font-semibold">{stats.tables}</div>
-                <div className="text-[10px] tv-muted uppercase tracking-wider">Tables</div>
-              </div>
-              <div>
-                <div className="text-2xl font-semibold">{stats.chairs}</div>
-                <div className="text-[10px] tv-muted uppercase tracking-wider">Chairs</div>
-              </div>
-              <div>
-                <div className="text-2xl font-semibold">{stats.total}</div>
-                <div className="text-[10px] tv-muted uppercase tracking-wider">Total items</div>
-              </div>
-            </div>
-            <div className="mt-4 pt-4 border-t tv-divider">
-              <div className="flex items-center justify-between text-xs">
-                <span className="tv-muted">Guest count target</span>
-                <span className="font-medium">{eventGuests}</span>
-              </div>
-              <div className="mt-2 h-2 bg-[#0a0c10] rounded overflow-hidden">
-                <div className={classNames(
-                  "h-full transition-all",
-                  stats.capacity >= eventGuests ? "bg-emerald-500" : "bg-amber-500"
-                )} style={{ width: `${Math.min(100, (stats.capacity / eventGuests) * 100)}%` }}></div>
-              </div>
-              <div className="text-[10px] tv-muted mt-1">
-                {stats.capacity >= eventGuests
-                  ? `✓ ${stats.capacity - eventGuests} seats over target`
-                  : `${eventGuests - stats.capacity} seats short of target`}
-              </div>
-            </div>
-          </div>
-
-          <div className="p-5 border-b tv-divider">
-            <div className="text-xs uppercase tv-muted tracking-wider mb-3">Selected item</div>
-            {selected && selectedFurn ? (
-              <div className="space-y-3">
-                <div>
-                  <div className="font-medium text-sm">{selectedFurn.label}</div>
-                  <div className="text-xs tv-muted">
-                    {selectedFurn.shape === 'circle' ? `${selectedFurn.diameter}' diameter` : `${selectedFurn.w}'×${selectedFurn.h}'`}
-                    {selectedFurn.capacity > 0 ? ` · seats ${selectedFurn.capacity}` : ''}
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] tv-muted uppercase tracking-wider">X (ft)</label>
-                    <div className="text-sm font-medium">{selected.xFt.toFixed(1)}</div>
-                  </div>
-                  <div>
-                    <label className="text-[10px] tv-muted uppercase tracking-wider">Y (ft)</label>
-                    <div className="text-sm font-medium">{selected.yFt.toFixed(1)}</div>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  {selectedFurn.shape === 'rect' && (
-                    <button onClick={() => rotateItem(selected.id)} className="flex-1 px-2 py-1.5 text-xs tv-panel-2 border tv-divider rounded hover:border-[var(--tv-gold)]">⟳ Rotate</button>
-                  )}
-                  <button onClick={() => duplicateItem(selected.id)} className="flex-1 px-2 py-1.5 text-xs tv-panel-2 border tv-divider rounded hover:border-[var(--tv-gold)]">⎘ Duplicate</button>
-                  <button onClick={() => deleteItem(selected.id)} className="flex-1 px-2 py-1.5 text-xs rounded tv-red-bg">✕ Delete</button>
-                </div>
-              </div>
-            ) : (
-              <div className="text-xs tv-muted">Click an item on the floor to edit, rotate, or duplicate it.</div>
-            )}
-          </div>
-
-          <div className="p-5 flex-1 overflow-auto scroll-thin">
-            <div className="text-xs uppercase tv-muted tracking-wider mb-3">Compliance check</div>
-            <div className="space-y-2 text-xs">
-              <div className="flex items-start gap-2">
-                <span className="text-emerald-400 mt-0.5">✓</span>
-                <div>
-                  <div>Aisle clearance ≥ 4 ft</div>
-                  <div className="tv-muted text-[10px]">Confirmed for preset layouts</div>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="text-emerald-400 mt-0.5">✓</span>
-                <div>
-                  <div>Stage sightlines unobstructed</div>
-                  <div className="tv-muted text-[10px]">All chairs face stage zone</div>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className={stats.capacity >= eventGuests ? "text-emerald-400 mt-0.5" : "text-amber-400 mt-0.5"}>
-                  {stats.capacity >= eventGuests ? '✓' : '!'}
-                </span>
-                <div>
-                  <div>Guest capacity target</div>
-                  <div className="tv-muted text-[10px]">{stats.capacity} / {eventGuests}</div>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="text-emerald-400 mt-0.5">✓</span>
-                <div>
-                  <div>Loading dock access clear</div>
-                  <div className="tv-muted text-[10px]">No items in dock approach</div>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="w-72 tv-panel border-l tv-divider flex flex-col flex-shrink-0 overflow-y-auto scroll-thin">
+          {renderPropsPanel()}
         </div>
       </div>
     </div>
@@ -1540,7 +1850,7 @@ function Designer({ events, currentEvent, onSaveEvent }) {
 // INVENTORY
 // ============================================================
 
-function Inventory() {
+function Inventory({ isMobile }) {
   const categories = [...new Set(INVENTORY.map(i => i.category))];
   const [active, setActive] = useState('All');
   const filtered = active === 'All' ? INVENTORY : INVENTORY.filter(i => i.category === active);
@@ -1556,15 +1866,15 @@ function Inventory() {
           </button>
         }
       />
-      <div className="flex-1 overflow-auto scroll-thin p-8 space-y-6">
-        <div className="grid grid-cols-4 gap-4">
+      <div className="flex-1 overflow-auto scroll-thin p-4 sm:p-8 space-y-4 sm:space-y-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <StatCard label="Total Items" value={INVENTORY.reduce((a,i) => a + i.stock, 0)} sub="Across all categories" />
           <StatCard label="Currently Deployed" value={INVENTORY.reduce((a,i) => a + i.deployed, 0)} sub="On floor for live events" accent="tv-gold" />
           <StatCard label="Available" value={INVENTORY.reduce((a,i) => a + (i.stock - i.deployed), 0)} sub="Ready to schedule" accent="text-emerald-400" />
           <StatCard label="Low-Stock Alerts" value="2" sub="Lounge sofas, podiums" accent="text-amber-400" />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button onClick={() => setActive('All')} className={classNames(
             "px-3 py-1.5 text-xs rounded-full border",
             active === 'All' ? 'tv-gold-bg border-transparent' : 'tv-panel border-[var(--tv-line)] tv-muted hover:text-white'
@@ -1577,7 +1887,38 @@ function Inventory() {
           ))}
         </div>
 
-        <div className="tv-panel rounded-lg overflow-hidden">
+        {/* Mobile: card list */}
+        <div className="space-y-2 sm:hidden">
+          {filtered.map(i => {
+            const pct = (i.deployed / i.stock) * 100;
+            return (
+              <div key={i.id} className="tv-panel rounded-lg p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="font-medium truncate text-sm">{i.name}</div>
+                    <div className="text-xs tv-muted truncate">{i.category}</div>
+                  </div>
+                  <div className="text-right text-xs flex-shrink-0">
+                    <div><span className="tv-muted">Avail </span><span className={i.stock - i.deployed < 5 ? 'text-amber-400 font-medium' : 'font-medium'}>{i.stock - i.deployed}</span></div>
+                    <div className="tv-muted">{i.deployed}/{i.stock}</div>
+                  </div>
+                </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="flex-1 h-1.5 bg-[#0a0c10] rounded overflow-hidden">
+                    <div className={classNames(
+                      "h-full",
+                      pct > 80 ? 'bg-red-500' : pct > 50 ? 'bg-amber-500' : 'bg-emerald-500'
+                    )} style={{ width: `${pct}%` }}></div>
+                  </div>
+                  <span className="text-[10px] tv-muted w-8 text-right">{pct.toFixed(0)}%</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop: table */}
+        <div className="tv-panel rounded-lg overflow-hidden hidden sm:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-xs uppercase tracking-wider tv-muted border-b tv-divider">
@@ -1627,7 +1968,7 @@ function Inventory() {
 // REPORTS
 // ============================================================
 
-function Reports({ events }) {
+function Reports({ events, isMobile }) {
   // Utilization by space
   const utilByPreset = {};
   events.forEach(e => {
@@ -1643,8 +1984,8 @@ function Reports({ events }) {
         subtitle="Venue utilization, layout patterns, and operational benchmarks."
         right={<button className="px-3 py-2 text-sm tv-panel-2 rounded border tv-divider hover:border-[var(--tv-gold)]">Export CSV</button>}
       />
-      <div className="flex-1 overflow-auto scroll-thin p-8 space-y-6">
-        <div className="grid grid-cols-3 gap-6">
+      <div className="flex-1 overflow-auto scroll-thin p-4 sm:p-8 space-y-4 sm:space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           <div className="tv-panel rounded-lg p-5">
             <div className="text-xs uppercase tv-muted tracking-wider">Booking velocity</div>
             <div className="text-3xl font-semibold mt-2 tv-gold">+24%</div>
@@ -1691,7 +2032,7 @@ function Reports({ events }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           <div className="tv-panel rounded-lg p-5">
             <h3 className="font-semibold mb-4">Most-used layouts</h3>
             <div className="space-y-3">
@@ -1751,6 +2092,8 @@ function App() {
   const [view, setView] = useState('dashboard');
   const [events] = useState(SAMPLE_EVENTS);
   const [currentEvent, setCurrentEvent] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const openEvent = (e) => {
     setCurrentEvent(e);
@@ -1762,15 +2105,50 @@ function App() {
     setView('designer');
   };
 
+  const handleNav = (v) => {
+    setView(v);
+    if (v === 'designer' && !currentEvent) {
+      setCurrentEvent({ name: 'New Event', client: '', guests: 200, space: 'A', preset: null });
+    }
+  };
+
+  const VIEW_LABELS = {
+    dashboard: 'Dashboard',
+    designer: 'Layout Designer',
+    events: 'Events',
+    inventory: 'Inventory',
+    reports: 'Reports',
+  };
+
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar active={view} onNav={(v) => { setView(v); if (v === 'designer' && !currentEvent) setCurrentEvent({ name: 'New Event', client: '', guests: 200, space: 'A', preset: null }); }} />
-      <main className="flex-1 flex flex-col overflow-hidden">
-        {view === 'dashboard' && <Dashboard events={events} onOpenEvent={openEvent} onNewEvent={newEvent} onNav={setView} />}
-        {view === 'designer' && <Designer events={events} currentEvent={currentEvent} />}
-        {view === 'events' && <EventsScreen events={events} onOpenEvent={openEvent} onNewEvent={newEvent} />}
-        {view === 'inventory' && <Inventory />}
-        {view === 'reports' && <Reports events={events} />}
+      {/* Desktop: persistent sidebar */}
+      {!isMobile && <Sidebar active={view} onNav={handleNav} isMobile={false} />}
+
+      {/* Mobile: slide-over drawer */}
+      {isMobile && drawerOpen && (
+        <div className="fixed inset-0 z-40 flex">
+          <div className="backdrop absolute inset-0" onClick={() => setDrawerOpen(false)} />
+          <div className="relative z-50 drawer-shown" style={{ animation: 'none' }}>
+            <Sidebar active={view} onNav={handleNav} isMobile={true} onClose={() => setDrawerOpen(false)} />
+          </div>
+        </div>
+      )}
+
+      <main className="flex-1 flex flex-col overflow-hidden min-w-0">
+        {isMobile && (
+          <MobileTopBar
+            onMenu={() => setDrawerOpen(true)}
+            title={VIEW_LABELS[view]}
+          />
+        )}
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+          {view === 'dashboard' && <Dashboard events={events} onOpenEvent={openEvent} onNewEvent={newEvent} onNav={setView} isMobile={isMobile} />}
+          {view === 'designer' && <Designer events={events} currentEvent={currentEvent} isMobile={isMobile} />}
+          {view === 'events' && <EventsScreen events={events} onOpenEvent={openEvent} onNewEvent={newEvent} isMobile={isMobile} />}
+          {view === 'inventory' && <Inventory isMobile={isMobile} />}
+          {view === 'reports' && <Reports events={events} isMobile={isMobile} />}
+        </div>
       </main>
     </div>
   );
