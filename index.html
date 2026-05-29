@@ -154,6 +154,106 @@ const SPACES = {
   },
 };
 
+// ============================================================
+// FULL BUILDING FLOOR PLAN
+// Derived from "Floor Plan — TriVision Event Center".
+// Coordinate system: origin (0,0) at the FRONT-LEFT corner.
+//   x → runs left→right along the Main Entrance / Route 50 frontage
+//   z → runs front→back toward the loading docks
+// All units in feet. Each room is an axis-aligned rectangle whose
+// (x, z) is its front-left corner. Layout is faithful to the plan's
+// arrangement and relative sizing rather than survey-exact.
+// ============================================================
+
+const BUILDING = {
+  widthFt: 101,
+  depthFt: 126,
+  // type drives floor tint + label styling
+  rooms: [
+    // ---- LEFT COLUMN (left wall, bottom→top: 46 + 42 + 14 + 8 + 16 = 126) ----
+    { id: 'C', name: 'Space C', sub: 'Optional Breakout Room', x: 0, z: 0, w: 34, d: 46, type: 'event', bookable: 'C' },
+    { id: 'B', name: 'Space B', sub: 'Buffet Dining / Breakout', x: 0, z: 46, w: 26, d: 42, type: 'event', bookable: 'B' },
+    { id: 'greenroom', name: 'VIP Lounge', sub: 'Green Room', x: 0, z: 88, w: 16, d: 14, type: 'lounge' },
+    { id: 'dressing', name: 'Dressing Room', sub: 'Restroom 3', x: 0, z: 102, w: 14, d: 8, type: 'restroom' },
+    { id: 'stagingL', name: 'Staging', sub: 'Food Prep Area', x: 0, z: 110, w: 35, d: 16, type: 'service' },
+
+    // ---- CENTER COLUMN (44′-wide main hall) ----
+    { id: 'lobby', name: 'Lobby', sub: 'Sitting Area', x: 36, z: 0, w: 20, d: 18, type: 'reception', noWall: ['left'] },
+    { id: 'reception', name: 'Reception Area', sub: 'Main Entrance', x: 56, z: 0, w: 24, d: 18, type: 'reception', noWall: ['right'] },
+    { id: 'control', name: 'Event Operations', sub: 'Control Room · 41′×13′', x: 36, z: 18, w: 41, d: 13, type: 'service' },
+    { id: 'coat', name: 'Coat Check', sub: 'Room', x: 64, z: 31, w: 17, d: 11, type: 'service' },
+    { id: 'A', name: 'Space A', sub: 'Main Ballroom · LED Stage', x: 36, z: 31, w: 46, d: 77, type: 'event', bookable: 'A', noWall: ['left'] },
+    { id: 'barL', name: 'Lounge / Bar', sub: 'Optional Bar Area', x: 16, z: 88, w: 18, d: 20, type: 'lounge', noWall: ['back', 'front', 'left'] },
+    { id: 'equip', name: 'Equipment Office', sub: '', x: 35, z: 110, w: 14, d: 16, type: 'service' },
+    { id: 'stagingR', name: 'Staging', sub: 'Food Prep Area', x: 49, z: 108, w: 52, d: 18, type: 'service' },
+
+    // ---- RIGHT COLUMN (right wall, bottom→top: 22 + 12.5 + 28.5 + 15 + 12 + 13 + 19 = 122) ----
+    { id: 'vipmeet', name: 'VIP / Meeting Room', sub: '21′×22′', x: 80, z: 0, w: 21, d: 22, type: 'office' },
+    { id: 'lounge1', name: 'Lounge', sub: '', x: 86, z: 22, w: 15, d: 12.5, type: 'lounge', noWall: ['front', 'right'] },
+    { id: 'openlounge', name: 'Open Lounge', sub: '', x: 86, z: 34.5, w: 15, d: 28.5, type: 'lounge', noWall: ['back', 'right'] },
+    { id: 'exec', name: 'Executive Office', sub: '15′×12′', x: 86, z: 63, w: 15, d: 15, type: 'office' },
+    { id: 'kitchen', name: 'Kitchen', sub: '', x: 86, z: 78, w: 15, d: 12, type: 'kitchen', noWall: ['right'] },
+    { id: 'restroom2', name: 'Restroom 2', sub: '', x: 86, z: 90, w: 15, d: 6.5, type: 'restroom' },
+    { id: 'restroom1', name: 'Restroom 1', sub: '', x: 86, z: 96.5, w: 15, d: 6.5, type: 'restroom' },
+    { id: 'deckTR', name: 'Back Entrance', sub: 'Deck', x: 91, z: 103, w: 10, d: 19, type: 'service' },
+  ],
+  // Key fixtures rendered in 3D (positions are front-left corners, feet).
+  fixtures: [
+    { kind: 'stage', x: 45, z: 99,  w: 28, d: 8 },           // Main Stage at back of Space A
+    { kind: 'led',   x: 45, z: 107, w: 28, d: 0.6 },         // LED video wall against back wall
+    { kind: 'bar',   x: 84, z: 84, w: 3,  d: 14, label: 'Splash Bar' },
+    { kind: 'bar',   x: 18, z: 100, w: 14, d: 2.5, label: 'Bar' },
+    { kind: 'counter', x: 86, z: 85, w: 15, d: 3 },          // Kitchen line
+    { kind: 'counter', x: 60, z: 2,  w: 14, d: 3 },          // Reception desk
+  ],
+  // Door / opening markers (floor glyphs) at key thresholds.
+  doors: [
+    { x: 42, z: 1,   label: 'Main Entrance' },
+    { x: 60, z: 1,   label: 'Main Entrance' },
+    { x: 33, z: 62,  label: 'Space B' },
+    { x: 35, z: 22,  label: 'Space C' },
+    { x: 85, z: 48,  label: 'Lounges' },
+    { x: 18, z: 125, label: 'Loading Dock 3' },
+    { x: 42, z: 125, label: 'Loading Dock 2' },
+    { x: 72, z: 125, label: 'Loading Dock 1' },
+  ],
+};
+
+// Floor tint + label accent per room type
+const ROOM_TYPE_STYLE = {
+  event:     { floor: 0x1b2233, label: '#c8a96a', wall: 0x2a2f3d },
+  lounge:    { floor: 0x231d24, label: '#c79b8a', wall: 0x352b33 },
+  service:   { floor: 0x141821, label: '#8b91a3', wall: 0x252a36 },
+  office:    { floor: 0x18202a, label: '#7fa6c8', wall: 0x2a3340 },
+  restroom:  { floor: 0x161922, label: '#8b91a3', wall: 0x252a36 },
+  kitchen:   { floor: 0x1f1c16, label: '#cbb07a', wall: 0x35301f },
+  reception: { floor: 0x1a2230, label: '#c8a96a', wall: 0x2a3340 },
+};
+
+// Resolve any room (event space or support room) into a designable "space"
+// object the Layout Designer can render. Spaces A/B/C keep their tuned
+// dimensions + fixtures from SPACES; all other rooms are derived from
+// the BUILDING floor plan so every room can be furnished.
+function getSpace(id) {
+  if (SPACES[id]) return SPACES[id];
+  const r = BUILDING.rooms.find(rm => rm.id === id);
+  if (!r) return SPACES.A;
+  return {
+    id: r.id,
+    name: r.name + (r.sub ? ' — ' + r.sub : ''),
+    widthFt: r.w,
+    depthFt: r.d,
+    description: r.sub || '',
+    fixtures: [],
+  };
+}
+
+// Ordered list of every designable room for the Designer's space picker.
+const DESIGNABLE_ROOMS = BUILDING.rooms.map(r => ({
+  id: r.id,
+  label: r.name + (r.sub ? ' — ' + r.sub : ''),
+}));
+
 // All measurements in feet
 const FURNITURE_LIBRARY = [
   { id: 'round-60', label: 'Round Table 60"', type: 'table', shape: 'circle', diameter: 5, capacity: 8, color: '#3b4458' },
@@ -374,6 +474,27 @@ function pxToFt(px) { return px / FT_TO_PX; }
 
 function uid() { return Math.random().toString(36).slice(2, 9); }
 
+// ----------------------------------------------------------
+// Project store — whole-building furniture layouts persisted in localStorage.
+// A project = { id, name, createdAt, updatedAt, layouts: { [roomId]: item[] } }
+// ----------------------------------------------------------
+const PROJECTS_KEY = 'tv_projects_v1';
+const ACTIVE_PROJECT_KEY = 'tv_active_project_v1';
+
+function loadProjects() {
+  try { return JSON.parse(localStorage.getItem(PROJECTS_KEY)) || []; }
+  catch (e) { return []; }
+}
+function persistProjects(list) {
+  try { localStorage.setItem(PROJECTS_KEY, JSON.stringify(list)); } catch (e) {}
+}
+function loadActiveProjectId() {
+  try { return localStorage.getItem(ACTIVE_PROJECT_KEY) || null; } catch (e) { return null; }
+}
+function persistActiveProjectId(id) {
+  try { id ? localStorage.setItem(ACTIVE_PROJECT_KEY, id) : localStorage.removeItem(ACTIVE_PROJECT_KEY); } catch (e) {}
+}
+
 function classNames(...c) { return c.filter(Boolean).join(' '); }
 
 // ============================================================
@@ -383,6 +504,7 @@ function classNames(...c) { return c.filter(Boolean).join(' '); }
 function Sidebar({ active, onNav, isMobile, onClose }) {
   const items = [
     { id: 'dashboard', label: 'Dashboard', icon: '◫' },
+    { id: 'floorplan', label: 'Floor Plan', icon: '⌂' },
     { id: 'designer', label: 'Layout Designer', icon: '✦' },
     { id: 'events', label: 'Events', icon: '◐' },
     { id: 'inventory', label: 'Inventory', icon: '⊞' },
@@ -1453,9 +1575,686 @@ function FloorPlanCanvas({ space, items, onMove, onSelect, selectedId, onDeselec
   );
 }
 
-function Designer({ events, currentEvent, onSaveEvent, isMobile }) {
+// ============================================================
+// FULL-BUILDING 3D FLOOR PLAN
+// ============================================================
+
+function BuildingView({ isMobile, onOpenSpace, activeProject }) {
+  const containerRef = useRef(null);
+  const labelLayerRef = useRef(null);
+  const [mode, setMode] = useState('orbit');       // 'orbit' | 'roam'
+  const [focusedRoomId, setFocusedRoomId] = useState(null);
+
+  const W = BUILDING.widthFt, D = BUILDING.depthFt;
+  const focusedRoom = focusedRoomId ? BUILDING.rooms.find(r => r.id === focusedRoomId) : null;
+
+  const st = useRef({
+    scene: null, camera: null, renderer: null, raycaster: null, mouse: null,
+    floorMeshes: [], roomFloorById: {}, labels: [], animId: null,
+    orbit: { azimuth: -Math.PI / 2 + 0.45, polar: Math.PI / 3.4, distance: 200, target: new THREE.Vector3(0, 2, 0) },
+    desired: { azimuth: -Math.PI / 2 + 0.45, polar: Math.PI / 3.4, distance: 200, target: new THREE.Vector3(0, 2, 0) },
+    fp: { pos: new THREE.Vector3(0, 5.5, -D / 2 + 8), yaw: 0, pitch: -0.05, keys: {}, btn: {} },
+    mode: 'orbit',
+    onFocus: null,
+  }).current;
+
+  st.mode = mode;
+  st.onFocus = setFocusedRoomId;
+
+  // world-center helpers (origin at building center)
+  const cx = (x, w) => -(x + w / 2 - W / 2);
+  const cz = (z, d) => z + d / 2 - D / 2;
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const getW = () => container.clientWidth || 800;
+    const getH = () => container.clientHeight || 600;
+    let width = getW(), height = getH();
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x070809);
+    scene.fog = new THREE.Fog(0x070809, 120, 360);
+
+    const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 800);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(width, height);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    container.appendChild(renderer.domElement);
+    renderer.domElement.style.display = 'block';
+    renderer.domElement.style.borderRadius = '6px';
+
+    // Lights
+    scene.add(new THREE.AmbientLight(0xffffff, 0.42));
+    const key = new THREE.DirectionalLight(0xfff1d6, 0.8);
+    key.position.set(W * 0.3, 130, D * 0.2);
+    key.castShadow = true;
+    key.shadow.mapSize.set(2048, 2048);
+    const sr = Math.max(W, D) * 0.75;
+    Object.assign(key.shadow.camera, { left: -sr, right: sr, top: sr, bottom: -sr, near: 1, far: 360 });
+    scene.add(key);
+    scene.add(new THREE.HemisphereLight(0xc8a96a, 0x0a0c10, 0.45));
+
+    // Exterior ground (parking / surrounds)
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(W + 120, D + 120),
+      new THREE.MeshStandardMaterial({ color: 0x0c0e13, roughness: 1 })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.06;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // Building slab
+    const slab = new THREE.Mesh(
+      new THREE.PlaneGeometry(W, D),
+      new THREE.MeshStandardMaterial({ color: 0x0f1218, roughness: 0.95 })
+    );
+    slab.rotation.x = -Math.PI / 2;
+    slab.position.y = -0.02;
+    slab.receiveShadow = true;
+    scene.add(slab);
+
+    const wallH = 9;
+    const partitionMat = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.95 });
+
+    const floorMeshes = [];
+    const roomFloorById = {};
+
+    // Rooms: floor tile + partition walls
+    BUILDING.rooms.forEach(r => {
+      const style = ROOM_TYPE_STYLE[r.type] || ROOM_TYPE_STYLE.service;
+      // floor tile (raycast target)
+      const tile = new THREE.Mesh(
+        new THREE.PlaneGeometry(Math.max(r.w - 0.6, 1), Math.max(r.d - 0.6, 1)),
+        new THREE.MeshStandardMaterial({ color: style.floor, roughness: 0.9, metalness: 0.05 })
+      );
+      tile.rotation.x = -Math.PI / 2;
+      tile.position.set(cx(r.x, r.w), 0.02, cz(r.z, r.d));
+      tile.receiveShadow = true;
+      tile.userData.roomId = r.id;
+      scene.add(tile);
+      floorMeshes.push(tile);
+      roomFloorById[r.id] = tile;
+
+      // four partition walls around the room
+      const wm = partitionMat(style.wall);
+      const ax = cx(r.x, r.w), az = cz(r.z, r.d);
+      const mkWall = (w, d, ox, oz) => {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(w, wallH, d), wm);
+        m.position.set(ax + ox, wallH / 2, az + oz);
+        m.castShadow = true; m.receiveShadow = true;
+        scene.add(m);
+      };
+      const skip = r.noWall || [];
+      if (!skip.includes('back'))  mkWall(r.w, 0.4, 0, -r.d / 2);   // back
+      if (!skip.includes('front')) mkWall(r.w, 0.4, 0, r.d / 2);    // front
+      if (!skip.includes('left'))  mkWall(0.4, r.d, -r.w / 2, 0);   // left
+      if (!skip.includes('right')) mkWall(0.4, r.d, r.w / 2, 0);    // right
+    });
+
+    // Outer perimeter wall (encloses the footprint)
+    const perimMat = new THREE.MeshStandardMaterial({ color: 0x20242f, roughness: 0.9 });
+    const perimH = 11;
+    const mkPerim = (w, d, x, z) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, perimH, d), perimMat);
+      m.position.set(x, perimH / 2, z);
+      m.castShadow = true; m.receiveShadow = true;
+      scene.add(m);
+    };
+    mkPerim(W + 1, 0.6, 0, -D / 2);
+    mkPerim(W + 1, 0.6, 0, D / 2);
+    mkPerim(0.6, D + 1, -W / 2, 0);
+    mkPerim(0.6, D + 1, W / 2, 0);
+
+    // Fixtures
+    BUILDING.fixtures.forEach(f => {
+      const fx = cx(f.x, f.w), fz = cz(f.z, f.d);
+      if (f.kind === 'stage') {
+        const platform = new THREE.Mesh(
+          new THREE.BoxGeometry(f.w, 1.4, f.d),
+          new THREE.MeshStandardMaterial({ color: 0x1c1419, roughness: 0.6, metalness: 0.2 })
+        );
+        platform.position.set(fx, 0.7, fz);
+        platform.castShadow = true; platform.receiveShadow = true;
+        scene.add(platform);
+        const trim = new THREE.Mesh(
+          new THREE.BoxGeometry(f.w + 0.1, 0.08, f.d + 0.1),
+          new THREE.MeshStandardMaterial({ color: 0xc8a96a, metalness: 0.7, roughness: 0.25 })
+        );
+        trim.position.set(fx, 1.4, fz);
+        scene.add(trim);
+      } else if (f.kind === 'led') {
+        const ledH = 8;
+        const led = new THREE.Mesh(
+          new THREE.BoxGeometry(f.w, ledH, 0.5),
+          new THREE.MeshStandardMaterial({ color: 0x2a1218, emissive: 0xb3253b, emissiveIntensity: 0.55, roughness: 0.4 })
+        );
+        led.position.set(fx, ledH / 2 + 1.4, fz);
+        scene.add(led);
+        const glow = new THREE.Mesh(
+          new THREE.PlaneGeometry(f.w - 0.4, ledH - 0.8),
+          new THREE.MeshBasicMaterial({ color: 0xff6a85, transparent: true, opacity: 0.22 })
+        );
+        glow.position.set(fx, ledH / 2 + 1.4, fz + 0.3);
+        scene.add(glow);
+      } else if (f.kind === 'bar' || f.kind === 'counter') {
+        const h = f.kind === 'bar' ? 3.6 : 3;
+        const body = new THREE.Mesh(
+          new THREE.BoxGeometry(f.w, h, f.d),
+          new THREE.MeshStandardMaterial({ color: 0x2a2018, roughness: 0.7, metalness: 0.15 })
+        );
+        body.position.set(fx, h / 2, fz);
+        body.castShadow = true; body.receiveShadow = true;
+        scene.add(body);
+        const top = new THREE.Mesh(
+          new THREE.BoxGeometry(f.w + 0.2, 0.16, f.d + 0.2),
+          new THREE.MeshStandardMaterial({ color: 0xc8a96a, metalness: 0.6, roughness: 0.3 })
+        );
+        top.position.set(fx, h, fz);
+        scene.add(top);
+      }
+    });
+
+    // Door / opening floor glyphs
+    BUILDING.doors.forEach(dr => {
+      const m = new THREE.Mesh(
+        new THREE.CircleGeometry(1.4, 24),
+        new THREE.MeshStandardMaterial({ color: 0x4ea36c, emissive: 0x4ea36c, emissiveIntensity: 0.5, transparent: true, opacity: 0.5 })
+      );
+      m.rotation.x = -Math.PI / 2;
+      m.position.set(cx(dr.x, 0), 0.05, cz(dr.z, 0));
+      scene.add(m);
+    });
+
+    // Project furniture group (populated/refreshed by the activeProject effect)
+    const furnGroup = new THREE.Group();
+    scene.add(furnGroup);
+    st.furnGroup = furnGroup;
+
+    // ---- DOM labels ----
+    const labelLayer = labelLayerRef.current;
+    const labels = [];
+    const addLabel = (text, sub, world, kind) => {
+      const el = document.createElement('div');
+      el.style.position = 'absolute';
+      el.style.transform = 'translate(-50%,-50%)';
+      el.style.pointerEvents = 'none';
+      el.style.whiteSpace = 'nowrap';
+      el.style.textAlign = 'center';
+      el.style.transition = 'opacity 120ms linear';
+      if (kind === 'door') {
+        el.innerHTML = `<span style="font-size:9px;color:#7fcf9a;background:rgba(10,12,16,.7);padding:1px 6px;border-radius:999px;border:1px solid rgba(78,163,108,.4)">${text}</span>`;
+      } else {
+        el.innerHTML =
+          `<div style="font-size:12px;font-weight:600;color:${sub.color};text-shadow:0 1px 3px #000">${text}</div>` +
+          (sub.text ? `<div style="font-size:9px;color:#9aa0b0;text-shadow:0 1px 2px #000">${sub.text}</div>` : '');
+      }
+      labelLayer.appendChild(el);
+      labels.push({ el, world });
+    };
+    BUILDING.rooms.forEach(r => {
+      const style = ROOM_TYPE_STYLE[r.type] || ROOM_TYPE_STYLE.service;
+      addLabel(r.name, { color: style.label, text: r.sub }, new THREE.Vector3(cx(r.x, r.w), 7.5, cz(r.z, r.d)), 'room');
+    });
+    BUILDING.doors.forEach(dr => {
+      addLabel(dr.label, {}, new THREE.Vector3(cx(dr.x, 0), 2.2, cz(dr.z, 0)), 'door');
+    });
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    updateOrbitCamera(camera, st.orbit);
+    Object.assign(st, { scene, camera, renderer, raycaster, mouse, floorMeshes, roomFloorById, labels });
+
+    // ---------- INPUT ----------
+    const dom = renderer.domElement;
+    const press = { down: false, x: 0, y: 0, moved: 0 };
+
+    const ndc = (clientX, clientY) => {
+      const rect = dom.getBoundingClientRect();
+      mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+    };
+
+    const onDown = (e) => {
+      press.down = true; press.x = e.clientX; press.y = e.clientY; press.moved = 0;
+    };
+    const onMove = (e) => {
+      if (!press.down) return;
+      const dx = e.clientX - press.x, dy = e.clientY - press.y;
+      press.moved += Math.abs(dx) + Math.abs(dy);
+      press.x = e.clientX; press.y = e.clientY;
+      if (st.mode === 'orbit') {
+        st.desired.azimuth -= dx * 0.007;
+        st.desired.polar -= dy * 0.007;
+        st.desired.polar = Math.max(0.05, Math.min(Math.PI / 2 - 0.04, st.desired.polar));
+      } else {
+        st.fp.yaw -= dx * 0.005;
+        st.fp.pitch -= dy * 0.005;
+        st.fp.pitch = Math.max(-1.2, Math.min(1.2, st.fp.pitch));
+      }
+    };
+    const onUp = (e) => {
+      if (press.down && press.moved < 6 && st.mode === 'orbit') {
+        // treat as click → focus room
+        ndc(e.clientX, e.clientY);
+        raycaster.setFromCamera(mouse, camera);
+        const hit = raycaster.intersectObjects(st.floorMeshes, false)[0];
+        if (hit && hit.object.userData.roomId) st.onFocus(hit.object.userData.roomId);
+        else st.onFocus(null);
+      }
+      press.down = false;
+    };
+    const onWheel = (e) => {
+      e.preventDefault();
+      if (st.mode !== 'orbit') return;
+      st.desired.distance *= e.deltaY > 0 ? 1.1 : 0.9;
+      st.desired.distance = Math.max(30, Math.min(340, st.desired.distance));
+    };
+    const onKey = (down) => (e) => {
+      const k = e.key.toLowerCase();
+      if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
+      st.fp.keys[k] = down;
+    };
+    const keyDown = onKey(true), keyUp = onKey(false);
+
+    dom.addEventListener('mousedown', onDown);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    dom.addEventListener('wheel', onWheel, { passive: false });
+    dom.addEventListener('contextmenu', e => e.preventDefault());
+    window.addEventListener('keydown', keyDown);
+    window.addEventListener('keyup', keyUp);
+
+    // touch (1-finger look/orbit, 2-finger pinch zoom in orbit)
+    const touch = { mode: null, lastDist: 0, x: 0, y: 0, moved: 0 };
+    const onTouchStart = (e) => {
+      if (e.touches.length === 1) {
+        touch.mode = 'one'; touch.x = e.touches[0].clientX; touch.y = e.touches[0].clientY; touch.moved = 0;
+      } else if (e.touches.length === 2) {
+        touch.mode = 'pinch';
+        const a = e.touches[0], b = e.touches[1];
+        touch.lastDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      }
+      e.preventDefault();
+    };
+    const onTouchMove = (e) => {
+      if (touch.mode === 'one' && e.touches.length === 1) {
+        const t = e.touches[0];
+        const dx = t.clientX - touch.x, dy = t.clientY - touch.y;
+        touch.moved += Math.abs(dx) + Math.abs(dy);
+        touch.x = t.clientX; touch.y = t.clientY;
+        if (st.mode === 'orbit') {
+          st.desired.azimuth -= dx * 0.007;
+          st.desired.polar -= dy * 0.007;
+          st.desired.polar = Math.max(0.05, Math.min(Math.PI / 2 - 0.04, st.desired.polar));
+        } else {
+          st.fp.yaw -= dx * 0.005;
+          st.fp.pitch -= dy * 0.005;
+          st.fp.pitch = Math.max(-1.2, Math.min(1.2, st.fp.pitch));
+        }
+      } else if (touch.mode === 'pinch' && e.touches.length === 2 && st.mode === 'orbit') {
+        const a = e.touches[0], b = e.touches[1];
+        const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+        if (touch.lastDist > 0) {
+          st.desired.distance *= touch.lastDist / dist;
+          st.desired.distance = Math.max(30, Math.min(340, st.desired.distance));
+        }
+        touch.lastDist = dist;
+      }
+      e.preventDefault();
+    };
+    const onTouchEnd = (e) => {
+      if (touch.mode === 'one' && touch.moved < 8 && st.mode === 'orbit') {
+        ndc(touch.x, touch.y);
+        raycaster.setFromCamera(mouse, camera);
+        const hit = raycaster.intersectObjects(st.floorMeshes, false)[0];
+        if (hit && hit.object.userData.roomId) st.onFocus(hit.object.userData.roomId);
+      }
+      if (e.touches.length === 0) touch.mode = null;
+    };
+    dom.addEventListener('touchstart', onTouchStart, { passive: false });
+    dom.addEventListener('touchmove', onTouchMove, { passive: false });
+    dom.addEventListener('touchend', onTouchEnd);
+    dom.addEventListener('touchcancel', onTouchEnd);
+
+    const onResize = () => {
+      width = getW(); height = getH();
+      if (!width || !height) return;
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height);
+    };
+    window.addEventListener('resize', onResize);
+
+    // ---------- ANIMATE ----------
+    const proj = new THREE.Vector3();
+    const clampX = W / 2 - 3, clampZ = D / 2 - 3;
+    const animate = () => {
+      st.animId = requestAnimationFrame(animate);
+
+      if (st.mode === 'orbit') {
+        const o = st.orbit, d = st.desired, l = 0.16;
+        o.azimuth += (d.azimuth - o.azimuth) * l;
+        o.polar += (d.polar - o.polar) * l;
+        o.distance += (d.distance - o.distance) * l;
+        o.target.lerp(d.target, l);
+        updateOrbitCamera(camera, o);
+      } else {
+        const fp = st.fp;
+        const speed = 0.7;
+        const f = (fp.keys['w'] || fp.keys['arrowup'] || fp.btn.fwd ? 1 : 0) - (fp.keys['s'] || fp.keys['arrowdown'] || fp.btn.back ? 1 : 0);
+        const s = (fp.keys['d'] || fp.keys['arrowright'] || fp.btn.right ? 1 : 0) - (fp.keys['a'] || fp.keys['arrowleft'] || fp.btn.left ? 1 : 0);
+        if (f) { fp.pos.x += Math.sin(fp.yaw) * speed * f; fp.pos.z += Math.cos(fp.yaw) * speed * f; }
+        if (s) { fp.pos.x -= Math.cos(fp.yaw) * speed * s; fp.pos.z += Math.sin(fp.yaw) * speed * s; }
+        fp.pos.x = Math.max(-clampX, Math.min(clampX, fp.pos.x));
+        fp.pos.z = Math.max(-clampZ, Math.min(clampZ, fp.pos.z));
+        fp.pos.y = 5.5;
+        camera.position.copy(fp.pos);
+        camera.lookAt(
+          fp.pos.x + Math.sin(fp.yaw) * Math.cos(fp.pitch),
+          fp.pos.y + Math.sin(fp.pitch),
+          fp.pos.z + Math.cos(fp.yaw) * Math.cos(fp.pitch)
+        );
+      }
+
+      // labels
+      for (const lb of st.labels) {
+        proj.copy(lb.world).project(camera);
+        if (proj.z > 1) { lb.el.style.opacity = '0'; continue; }
+        const sx = (proj.x * 0.5 + 0.5) * width;
+        const sy = (-proj.y * 0.5 + 0.5) * height;
+        lb.el.style.left = sx + 'px';
+        lb.el.style.top = sy + 'px';
+        const dist = camera.position.distanceTo(lb.world);
+        lb.el.style.opacity = dist > 300 ? '0' : (dist > 220 ? '0.35' : '1');
+      }
+
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    return () => {
+      cancelAnimationFrame(st.animId);
+      dom.removeEventListener('mousedown', onDown);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      dom.removeEventListener('wheel', onWheel);
+      window.removeEventListener('keydown', keyDown);
+      window.removeEventListener('keyup', keyUp);
+      dom.removeEventListener('touchstart', onTouchStart);
+      dom.removeEventListener('touchmove', onTouchMove);
+      dom.removeEventListener('touchend', onTouchEnd);
+      dom.removeEventListener('touchcancel', onTouchEnd);
+      window.removeEventListener('resize', onResize);
+      st.labels.forEach(l => l.el.remove());
+      st.labels = [];
+      scene.traverse(obj => {
+        if (obj.geometry) obj.geometry.dispose();
+        if (obj.material) (Array.isArray(obj.material) ? obj.material : [obj.material]).forEach(m => m.dispose());
+      });
+      renderer.dispose();
+      if (dom.parentNode) dom.parentNode.removeChild(dom);
+    };
+    // eslint-disable-next-line
+  }, []);
+
+  // Focus animation + highlight when a room is selected (orbit mode only)
+  useEffect(() => {
+    // highlight tiles
+    BUILDING.rooms.forEach(r => {
+      const tile = st.roomFloorById[r.id];
+      if (!tile) return;
+      const on = r.id === focusedRoomId;
+      tile.material.emissive = new THREE.Color(on ? 0xc8a96a : 0x000000);
+      tile.material.emissiveIntensity = on ? 0.35 : 0;
+      tile.material.needsUpdate = true;
+    });
+    if (focusedRoom && st.mode === 'orbit') {
+      const r = focusedRoom;
+      st.desired.target.set(cx(r.x, r.w), 2, cz(r.z, r.d));
+      st.desired.distance = Math.max(r.w, r.d) * 1.9 + 26;
+      st.desired.polar = Math.PI / 3.6;
+    }
+    // eslint-disable-next-line
+  }, [focusedRoomId]);
+
+  // Render the active project's furniture as real 3D meshes inside each room.
+  //
+  // IMPORTANT axis note (prevents the "chairs face the wrong way" bug):
+  // The Layout Designer and the building use OPPOSITE depth axes —
+  //   • Designer: the stage sits at the TOP of the canvas (yFt = 0) and chairs
+  //     face -z (toward yFt = 0 / the stage).
+  //   • Building: the stage / LED wall is at the BACK of the room (high z).
+  // So designer→building is a proper 180° rotation about Y (reflect BOTH x and
+  // z, and rotate each item's facing by 180°). Do NOT use a bare x-mirror — that
+  // is improper and leaves furniture facing backwards. Keeping x and z reflected
+  // together makes it a true rotation, so chairs correctly face the stage.
+  useEffect(() => {
+    const fg = st.furnGroup;
+    if (!fg) return;
+    while (fg.children.length > 0) {
+      const child = fg.children[0];
+      fg.remove(child);
+      disposeGroup(child);
+    }
+    if (!activeProject) return;
+    BUILDING.rooms.forEach(room => {
+      const layout = activeProject.layouts[room.id];
+      if (!layout || !layout.length) return;
+      layout.forEach(item => {
+        const f = FURN_BY_ID[item.furnId];
+        if (!f) return;
+        const mesh = buildFurnitureMesh(item, f, false);
+        const swap = item.rotation === 90 || item.rotation === 270;
+        const sizeW = f.shape === 'circle' ? f.diameter : (swap ? f.h : f.w);
+        const sizeD = f.shape === 'circle' ? f.diameter : (swap ? f.w : f.h);
+        // Reflect x (matches the mirrored walls) and reflect z within the room
+        // (designer yFt = 0 → building back wall). Together = 180° rotation.
+        const dataX = room.x + item.xFt + sizeW / 2;
+        const dataZ = room.z + room.d - item.yFt - sizeD / 2;
+        mesh.position.set(W / 2 - dataX, 0, dataZ - D / 2);
+        // Orientation: designer mesh.rotation.y is -(rot); add 180° for the flip.
+        mesh.rotation.y = Math.PI - ((item.rotation || 0) * Math.PI) / 180;
+        fg.add(mesh);
+      });
+    });
+    // eslint-disable-next-line
+  }, [activeProject]);
+
+  const overview = () => {
+    setFocusedRoomId(null);
+    st.desired.target.set(0, 2, 0);
+    st.desired.distance = 200;
+    st.desired.polar = Math.PI / 3.4;
+    st.desired.azimuth = -Math.PI / 2 + 0.45;
+  };
+
+  const topView = () => {
+    setMode('orbit');
+    setFocusedRoomId(null);
+    st.desired.target.set(0, 0, 0);
+    st.desired.distance = Math.max(W, D) * 1.18;
+    st.desired.polar = 0.035;            // straight down (aerial)
+    st.desired.azimuth = -Math.PI / 2;    // front (entrance) at bottom of frame
+  };
+
+  const enterRoam = () => {
+    // seed first-person camera at the main entrance, looking in
+    st.fp.pos.set(0, 5.5, -D / 2 + 8);
+    st.fp.yaw = 0; st.fp.pitch = -0.05;
+    setMode('roam');
+  };
+
+  const setBtn = (name, val) => { st.fp.btn[name] = val; };
+
+  return (
+    <div className="relative w-full h-full no-touch-action" style={{ minHeight: isMobile ? 360 : 560 }}>
+      <div ref={containerRef} className="w-full h-full no-touch-action" style={{ minHeight: isMobile ? 360 : 560 }} />
+      <div ref={labelLayerRef} className="absolute inset-0 overflow-hidden pointer-events-none" />
+
+      {/* Mode toggle */}
+      <div className="absolute top-3 left-3 flex gap-1 bg-[#0a0c10]/80 backdrop-blur border tv-divider rounded p-1">
+        <button
+          onClick={() => setMode('orbit')}
+          className={classNames("px-3 py-1.5 text-[11px] rounded border", mode === 'orbit' ? "tab-active" : "tv-panel-2 tv-divider tv-muted hover:text-white")}
+        >Orbit</button>
+        <button
+          onClick={enterRoam}
+          className={classNames("px-3 py-1.5 text-[11px] rounded border", mode === 'roam' ? "tab-active" : "tv-panel-2 tv-divider tv-muted hover:text-white")}
+        >Free Roam</button>
+        <button
+          onClick={topView}
+          className="px-3 py-1.5 text-[11px] rounded border tv-panel-2 tv-divider tv-muted hover:text-white hover:border-[var(--tv-gold)]"
+          title="Snap straight overhead — easiest way to click rooms"
+        >⬒ Top View</button>
+      </div>
+
+      {/* Controls hint */}
+      <div className="absolute bottom-3 left-3 text-[10px] tv-muted bg-[#0a0c10]/80 backdrop-blur px-2 py-1.5 rounded border tv-divider pointer-events-none">
+        {mode === 'orbit' ? (
+          <>
+            <div><span className="tv-gold">Drag</span> · orbit &nbsp; <span className="tv-gold">Scroll</span> · zoom</div>
+            <div><span className="tv-gold">Click a room</span> · focus &amp; details</div>
+          </>
+        ) : (
+          <>
+            <div><span className="tv-gold">Drag</span> · look around</div>
+            <div><span className="tv-gold">{isMobile ? 'On-screen pad' : 'W A S D / arrows'}</span> · walk</div>
+          </>
+        )}
+      </div>
+
+      {/* Title chip */}
+      <div className="absolute top-3 right-3 text-[10px] tv-muted bg-[#0a0c10]/80 backdrop-blur px-2 py-1.5 rounded border tv-divider pointer-events-none text-right">
+        <div className="tv-gold font-medium">TriVision Event Center</div>
+        <div>{W}′ × {D}′ footprint</div>
+      </div>
+
+      {/* Focused room panel */}
+      {focusedRoom && mode === 'orbit' && (
+        <div className="absolute top-16 right-3 w-56 tv-panel border tv-divider rounded-lg p-3 shadow-xl">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <div className="text-sm font-semibold tv-gold">{focusedRoom.name}</div>
+              {focusedRoom.sub && <div className="text-[11px] tv-muted">{focusedRoom.sub}</div>}
+            </div>
+            <button onClick={overview} className="tv-muted hover:text-white text-base leading-none">✕</button>
+          </div>
+          <div className="mt-2 text-[11px] tv-muted">
+            {focusedRoom.w}′ × {focusedRoom.d}′ · {(focusedRoom.w * focusedRoom.d).toLocaleString()} sq ft
+          </div>
+          {onOpenSpace && (
+            <button
+              onClick={() => onOpenSpace(focusedRoom.id)}
+              className="mt-3 w-full tv-gold-bg text-xs font-medium py-1.5 rounded"
+            >＋ Add chairs &amp; designs →</button>
+          )}
+        </div>
+      )}
+
+      {/* Free-roam on-screen pad (mobile) */}
+      {mode === 'roam' && isMobile && (
+        <div className="absolute bottom-4 right-4 grid grid-cols-3 gap-1.5" style={{ width: 150 }}>
+          <div />
+          <RoamBtn label="▲" onDown={() => setBtn('fwd', true)} onUp={() => setBtn('fwd', false)} />
+          <div />
+          <RoamBtn label="◀" onDown={() => setBtn('left', true)} onUp={() => setBtn('left', false)} />
+          <RoamBtn label="▼" onDown={() => setBtn('back', true)} onUp={() => setBtn('back', false)} />
+          <RoamBtn label="▶" onDown={() => setBtn('right', true)} onUp={() => setBtn('right', false)} />
+        </div>
+      )}
+
+      {/* Overview button when focused */}
+      {focusedRoom && mode === 'orbit' && (
+        <button
+          onClick={overview}
+          className="absolute bottom-3 right-3 px-3 py-1.5 text-[11px] rounded tv-panel-2 border tv-divider hover:border-[var(--tv-gold)] hover:text-white tv-muted"
+        >⤢ Overview</button>
+      )}
+    </div>
+  );
+}
+
+function RoamBtn({ label, onDown, onUp }) {
+  return (
+    <button
+      className="h-11 rounded tv-panel-2 border tv-divider text-white text-lg flex items-center justify-center active:bg-[var(--tv-gold)] active:text-black select-none"
+      onMouseDown={onDown} onMouseUp={onUp} onMouseLeave={onUp}
+      onTouchStart={(e) => { e.preventDefault(); onDown(); }}
+      onTouchEnd={(e) => { e.preventDefault(); onUp(); }}
+    >{label}</button>
+  );
+}
+
+function FloorPlanScreen({ isMobile, onOpenSpace, projects, activeProject, onCreateProject, onSelectProject, onRenameProject, onDeleteProject }) {
+  const startProject = () => {
+    const name = window.prompt('Name your project', 'My Event');
+    if (name !== null) onCreateProject(name.trim() || 'Untitled Project');
+  };
+  const rename = () => {
+    if (!activeProject) return;
+    const name = window.prompt('Rename project', activeProject.name);
+    if (name !== null && name.trim()) onRenameProject(activeProject.id, name.trim());
+  };
+  const remove = () => {
+    if (!activeProject) return;
+    if (window.confirm(`Delete project "${activeProject.name}"? This removes all its room layouts.`)) {
+      onDeleteProject(activeProject.id);
+    }
+  };
+
+  return (
+    <div className="flex-1 flex flex-col min-h-0 p-3 md:p-5">
+      <div className="mb-3 flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-lg md:text-xl font-semibold">Venue Floor Plan</h1>
+          <p className="text-xs tv-muted">Explore the TriVision Event Center in 3D — orbit, click any room, or free-roam. Start a project to place furniture and see it all together.</p>
+        </div>
+        {/* Project controls */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {projects.length > 0 && (
+            <select
+              value={activeProject ? activeProject.id : ''}
+              onChange={e => onSelectProject(e.target.value || null)}
+              className="text-xs"
+            >
+              <option value="">— No project —</option>
+              {projects.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          )}
+          {activeProject ? (
+            <>
+              <button onClick={rename} className="px-2.5 py-1.5 text-xs rounded border tv-divider tv-panel-2 hover:border-[var(--tv-gold)]">Rename</button>
+              <button onClick={remove} className="px-2.5 py-1.5 text-xs rounded border tv-divider tv-panel-2 hover:border-red-400 hover:text-red-300">Delete</button>
+              <button onClick={startProject} className="px-3 py-1.5 text-xs tv-gold-bg font-medium rounded">＋ New Project</button>
+            </>
+          ) : (
+            <button onClick={startProject} className="px-3 py-1.5 text-xs tv-gold-bg font-medium rounded">＋ Start a Project</button>
+          )}
+        </div>
+      </div>
+      {activeProject && (
+        <div className="mb-2 text-[11px] tv-muted">
+          Active project: <span className="tv-gold font-medium">{activeProject.name}</span> · click a room → <span className="text-white">Add chairs &amp; designs</span> to furnish it. Furniture appears here automatically.
+        </div>
+      )}
+      <div className="flex-1 tv-panel border tv-divider rounded-lg overflow-hidden min-h-0">
+        <BuildingView isMobile={isMobile} onOpenSpace={onOpenSpace} activeProject={activeProject} />
+      </div>
+    </div>
+  );
+}
+
+function Designer({ events, currentEvent, onSaveEvent, isMobile, activeProject, onUpdateRoomLayout, onBackToFloorPlan }) {
   const [spaceId, setSpaceId] = useState(currentEvent?.space || 'A');
-  const space = SPACES[spaceId];
+  const space = getSpace(spaceId);
   const [items, setItems] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [eventName, setEventName] = useState(currentEvent?.name || 'Untitled Event');
@@ -1463,13 +2262,43 @@ function Designer({ events, currentEvent, onSaveEvent, isMobile }) {
   const [eventGuests, setEventGuests] = useState(currentEvent?.guests || 200);
   const [showSaved, setShowSaved] = useState(false);
 
-  // Initialize layout when event or space changes
+  // Project mode: this designer session is editing a room of the active project.
+  const projectMode = !!(activeProject && currentEvent?.projectId === activeProject.id);
+  const skipPersist = useRef(false);
+
+  // Switch the active room when a new room/event is opened (e.g. from the floor plan)
   useEffect(() => {
-    if (currentEvent?.preset) {
-      applyPreset(currentEvent.preset);
+    if (currentEvent?.space && currentEvent.space !== spaceId) {
+      setSpaceId(currentEvent.space);
     }
     // eslint-disable-next-line
-  }, [currentEvent?.id, spaceId]);
+  }, [currentEvent]);
+
+  // Initialize layout when event or space changes
+  useEffect(() => {
+    if (projectMode) {
+      // Load this room's saved layout from the active project (may be empty).
+      const saved = activeProject.layouts[spaceId] || [];
+      skipPersist.current = true;
+      setItems(saved.map(it => ({ ...it })));
+      setSelectedId(null);
+    } else if (currentEvent?.preset) {
+      applyPreset(currentEvent.preset);
+    } else {
+      // entering a non-event room with no preset → start empty
+      setItems([]);
+      setSelectedId(null);
+    }
+    // eslint-disable-next-line
+  }, [currentEvent?.id, spaceId, projectMode]);
+
+  // Persist edits back to the active project (project mode only).
+  useEffect(() => {
+    if (!projectMode) return;
+    if (skipPersist.current) { skipPersist.current = false; return; }
+    onUpdateRoomLayout(spaceId, items);
+    // eslint-disable-next-line
+  }, [items]);
 
   const applyPreset = (presetId) => {
     const preset = PRESETS.find(p => p.id === presetId);
@@ -1563,14 +2392,20 @@ function Designer({ events, currentEvent, onSaveEvent, isMobile }) {
   const renderSetupPanel = () => (
     <div className="flex flex-col">
       <div className="p-4 border-b tv-divider">
-        <div className="text-xs uppercase tv-muted tracking-wider mb-2">Event</div>
+        {projectMode && (
+          <div className="mb-3 text-[11px] tv-muted">
+            Project: <span className="tv-gold font-medium">{activeProject.name}</span>
+            <div className="mt-0.5">Editing this room saves to the project. Use <span className="text-white">View Floor Plan</span> to see everything together.</div>
+          </div>
+        )}
+        <div className="text-xs uppercase tv-muted tracking-wider mb-2">{projectMode ? 'Room' : 'Event'}</div>
         <input value={eventName} onChange={e => setEventName(e.target.value)} className="w-full mb-2 text-sm font-medium" />
         <input value={eventClient} onChange={e => setEventClient(e.target.value)} placeholder="Client name" className="w-full mb-2 text-xs" />
         <div className="flex items-center gap-2">
           <select value={spaceId} onChange={e => setSpaceId(e.target.value)} className="flex-1 text-xs">
-            <option value="A">Space A — Ballroom</option>
-            <option value="B">Space B — Buffet/Breakout</option>
-            <option value="C">Space C — Breakout Room</option>
+            {DESIGNABLE_ROOMS.map(r => (
+              <option key={r.id} value={r.id}>{r.label}</option>
+            ))}
           </select>
           <input type="number" value={eventGuests} onChange={e => setEventGuests(Number(e.target.value))} className="w-20 text-xs" />
         </div>
@@ -1761,6 +2596,9 @@ function Designer({ events, currentEvent, onSaveEvent, isMobile }) {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Compact action bar */}
         <div className="flex items-center gap-2 px-3 py-2 border-b tv-divider flex-shrink-0 overflow-x-auto">
+          {projectMode && onBackToFloorPlan && (
+            <button onClick={onBackToFloorPlan} className="px-2.5 py-1.5 text-xs rounded border tv-divider tv-panel-2 flex-shrink-0">⌂ Floor Plan</button>
+          )}
           <button onClick={clearAll} className="px-2.5 py-1.5 text-xs rounded border tv-divider tv-panel-2 flex-shrink-0">Clear</button>
           <button className="px-2.5 py-1.5 text-xs rounded border tv-divider tv-panel-2 flex-shrink-0">Export PDF</button>
           <button onClick={handleSave} className="px-3 py-1.5 text-xs tv-gold-bg font-medium rounded flex-shrink-0 ml-auto">
@@ -1816,6 +2654,9 @@ function Designer({ events, currentEvent, onSaveEvent, isMobile }) {
         subtitle="Drag furniture onto the floor or apply a preset to start."
         right={
           <>
+            {projectMode && onBackToFloorPlan && (
+              <button onClick={onBackToFloorPlan} className="px-3 py-2 text-sm rounded border tv-divider tv-panel-2 hover:border-[var(--tv-gold)]">⌂ View Floor Plan</button>
+            )}
             <button onClick={clearAll} className="px-3 py-2 text-sm rounded border tv-divider tv-panel-2 hover:border-red-400 hover:text-red-300">Clear</button>
             <button className="px-3 py-2 text-sm rounded border tv-divider tv-panel-2 hover:border-[var(--tv-gold)]">Export PDF</button>
             <button onClick={handleSave} className="px-4 py-2 text-sm tv-gold-bg font-medium rounded">
@@ -2095,6 +2936,32 @@ function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const isMobile = useIsMobile();
 
+  // ---- Whole-building projects (persisted) ----
+  const [projects, setProjects] = useState(loadProjects);
+  const [activeProjectId, setActiveProjectId] = useState(loadActiveProjectId);
+  useEffect(() => { persistProjects(projects); }, [projects]);
+  useEffect(() => { persistActiveProjectId(activeProjectId); }, [activeProjectId]);
+  const activeProject = projects.find(p => p.id === activeProjectId) || null;
+
+  const createProject = (name) => {
+    const p = { id: 'proj-' + Date.now(), name: name || 'Untitled Project', createdAt: Date.now(), updatedAt: Date.now(), layouts: {} };
+    setProjects(prev => [...prev, p]);
+    setActiveProjectId(p.id);
+    return p;
+  };
+  const deleteProject = (id) => {
+    setProjects(prev => prev.filter(p => p.id !== id));
+    setActiveProjectId(prev => (prev === id ? null : prev));
+  };
+  const renameProject = (id, name) => {
+    setProjects(prev => prev.map(p => p.id === id ? { ...p, name, updatedAt: Date.now() } : p));
+  };
+  const updateRoomLayout = (roomId, layoutItems) => {
+    setProjects(prev => prev.map(p => p.id === activeProjectId
+      ? { ...p, updatedAt: Date.now(), layouts: { ...p.layouts, [roomId]: layoutItems } }
+      : p));
+  };
+
   const openEvent = (e) => {
     setCurrentEvent(e);
     setView('designer');
@@ -2112,8 +2979,18 @@ function App() {
     }
   };
 
+  // Open a room for design from the floor plan — always inside the active project
+  // (auto-create one if none exists so placed furniture is saved & shown on the plan).
+  const openSpace = (spaceId) => {
+    let proj = activeProject;
+    if (!proj) proj = createProject('My Event');
+    setCurrentEvent({ name: proj.name, client: '', guests: 200, space: spaceId, preset: null, projectId: proj.id });
+    setView('designer');
+  };
+
   const VIEW_LABELS = {
     dashboard: 'Dashboard',
+    floorplan: 'Floor Plan',
     designer: 'Layout Designer',
     events: 'Events',
     inventory: 'Inventory',
@@ -2144,7 +3021,28 @@ function App() {
         )}
         <div className="flex-1 flex flex-col overflow-hidden min-h-0">
           {view === 'dashboard' && <Dashboard events={events} onOpenEvent={openEvent} onNewEvent={newEvent} onNav={setView} isMobile={isMobile} />}
-          {view === 'designer' && <Designer events={events} currentEvent={currentEvent} isMobile={isMobile} />}
+          {view === 'floorplan' && (
+            <FloorPlanScreen
+              isMobile={isMobile}
+              onOpenSpace={openSpace}
+              projects={projects}
+              activeProject={activeProject}
+              onCreateProject={createProject}
+              onSelectProject={setActiveProjectId}
+              onRenameProject={renameProject}
+              onDeleteProject={deleteProject}
+            />
+          )}
+          {view === 'designer' && (
+            <Designer
+              events={events}
+              currentEvent={currentEvent}
+              isMobile={isMobile}
+              activeProject={activeProject}
+              onUpdateRoomLayout={updateRoomLayout}
+              onBackToFloorPlan={() => setView('floorplan')}
+            />
+          )}
           {view === 'events' && <EventsScreen events={events} onOpenEvent={openEvent} onNewEvent={newEvent} isMobile={isMobile} />}
           {view === 'inventory' && <Inventory isMobile={isMobile} />}
           {view === 'reports' && <Reports events={events} isMobile={isMobile} />}
