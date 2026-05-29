@@ -175,7 +175,7 @@ const BUILDING = {
     { id: 'B', name: 'Space B', sub: 'Buffet Dining / Breakout', x: 0, z: 46, w: 26, d: 42, type: 'event', bookable: 'B' },
     { id: 'greenroom', name: 'VIP Lounge', sub: 'Green Room', x: 0, z: 88, w: 16, d: 14, type: 'lounge' },
     { id: 'dressing', name: 'Dressing Room', sub: 'Restroom 3', x: 0, z: 102, w: 14, d: 8, type: 'restroom' },
-    { id: 'stagingL', name: 'Staging', sub: 'Food Prep Area', x: 0, z: 110, w: 35, d: 16, type: 'service' },
+    { id: 'stagingL', name: '', sub: '', x: 0, z: 110, w: 35, d: 16, type: 'service' },
 
     // ---- CENTER COLUMN (44′-wide main hall) ----
     { id: 'lobby', name: 'Lobby', sub: 'Sitting Area', x: 36, z: 0, w: 20, d: 18, type: 'reception', noWall: ['left'] },
@@ -183,26 +183,26 @@ const BUILDING = {
     { id: 'control', name: 'Event Operations', sub: 'Control Room · 41′×13′', x: 36, z: 18, w: 41, d: 13, type: 'service' },
     { id: 'coat', name: 'Coat Check', sub: 'Room', x: 64, z: 31, w: 17, d: 11, type: 'service' },
     { id: 'A', name: 'Space A', sub: 'Main Ballroom · LED Stage', x: 36, z: 31, w: 46, d: 77, type: 'event', bookable: 'A', noWall: ['left'] },
-    { id: 'barL', name: 'Lounge / Bar', sub: 'Optional Bar Area', x: 16, z: 88, w: 18, d: 20, type: 'lounge', noWall: ['back', 'front', 'left'] },
-    { id: 'equip', name: 'Equipment Office', sub: '', x: 35, z: 110, w: 14, d: 16, type: 'service' },
-    { id: 'stagingR', name: 'Staging', sub: 'Food Prep Area', x: 49, z: 108, w: 52, d: 18, type: 'service' },
+    { id: 'barL', name: 'Lounge / Bar', sub: 'Makeup Room', x: 16, z: 88, w: 18, d: 20, type: 'lounge', noWall: ['back', 'front', 'left'] },
+    { id: 'equip', name: '', sub: '', x: 35, z: 110, w: 14, d: 16, type: 'service' },
+    { id: 'stagingR', name: '', sub: '', x: 49, z: 108, w: 52, d: 18, type: 'service' },
 
     // ---- RIGHT COLUMN (right wall, bottom→top: 22 + 12.5 + 28.5 + 15 + 12 + 13 + 19 = 122) ----
-    { id: 'vipmeet', name: 'VIP / Meeting Room', sub: '21′×22′', x: 80, z: 0, w: 21, d: 22, type: 'office' },
+    { id: 'vipmeet', name: 'Conference Room', sub: '', x: 80, z: 0, w: 21, d: 22, type: 'office' },
     { id: 'lounge1', name: 'Lounge', sub: '', x: 86, z: 22, w: 15, d: 12.5, type: 'lounge', noWall: ['front', 'right'] },
     { id: 'openlounge', name: 'Open Lounge', sub: '', x: 86, z: 34.5, w: 15, d: 28.5, type: 'lounge', noWall: ['back', 'right'] },
     { id: 'exec', name: 'Executive Office', sub: '15′×12′', x: 86, z: 63, w: 15, d: 15, type: 'office' },
     { id: 'kitchen', name: 'Kitchen', sub: '', x: 86, z: 78, w: 15, d: 12, type: 'kitchen', noWall: ['right'] },
     { id: 'restroom2', name: 'Restroom 2', sub: '', x: 86, z: 90, w: 15, d: 6.5, type: 'restroom' },
     { id: 'restroom1', name: 'Restroom 1', sub: '', x: 86, z: 96.5, w: 15, d: 6.5, type: 'restroom' },
-    { id: 'deckTR', name: 'Back Entrance', sub: 'Deck', x: 91, z: 103, w: 10, d: 19, type: 'service' },
+    { id: 'deckTR', name: 'Back Entrance', sub: '', x: 91, z: 103, w: 10, d: 19, type: 'service' },
   ],
   // Key fixtures rendered in 3D (positions are front-left corners, feet).
   fixtures: [
     { kind: 'stage', x: 45, z: 99,  w: 28, d: 8 },           // Main Stage at back of Space A
     { kind: 'led',   x: 45, z: 107, w: 28, d: 0.6 },         // LED video wall against back wall
     { kind: 'bar',   x: 84, z: 84, w: 3,  d: 14, label: 'Splash Bar' },
-    { kind: 'bar',   x: 18, z: 100, w: 14, d: 2.5, label: 'Bar' },
+    { kind: 'bar',   x: 31, z: 90, w: 2.5, d: 16, label: 'Makeup Table' }, // Table against the Space A–facing side of the makeup room
     { kind: 'counter', x: 86, z: 85, w: 15, d: 3 },          // Kitchen line
     { kind: 'counter', x: 60, z: 2,  w: 14, d: 3 },          // Reception desk
   ],
@@ -1798,12 +1798,17 @@ function BuildingView({ isMobile, onOpenSpace, activeProject }) {
       labels.push({ el, world });
     };
     BUILDING.rooms.forEach(r => {
+      if (!r.name) return; // unnamed rooms (e.g. staging) render no label
       const style = ROOM_TYPE_STYLE[r.type] || ROOM_TYPE_STYLE.service;
       addLabel(r.name, { color: style.label, text: r.sub }, new THREE.Vector3(cx(r.x, r.w), 7.5, cz(r.z, r.d)), 'room');
     });
     BUILDING.doors.forEach(dr => {
       addLabel(dr.label, {}, new THREE.Vector3(cx(dr.x, 0), 2.2, cz(dr.z, 0)), 'door');
     });
+    // LED wall / stage callout
+    addLabel('LED Wall / Stage', { color: '#ff6a85', text: 'Space A' }, new THREE.Vector3(cx(45, 28), 11, cz(107, 0.6)), 'room');
+    // Optional bar zone (text only — no physical bar) at the right end of the LED wall
+    addLabel('Optional Bar Area', { color: '#c8a96a', text: '' }, new THREE.Vector3(cx(77, 0), 5, cz(103, 0)), 'room');
 
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
